@@ -17,9 +17,9 @@
     "h3-js": "^4.4.0",
     "lucide-react": "^1.17.0",
     "maplibre-gl": "^5.24.0",
-    "next": "15.0.0",
-    "react": "19.0.0-rc-65a56d0e-20241020",
-    "react-dom": "19.0.0-rc-65a56d0e-20241020",
+    "next": "^16.2.7",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
     "remark-gfm": "^4.0.1",
@@ -29,8 +29,8 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "eslint": "^8",
-    "eslint-config-next": "15.0.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.7",
     "typescript": "^5"
   }
 }

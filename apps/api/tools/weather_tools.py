@@ -339,13 +339,13 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
         lon = arguments.get("lon")
         query = text("""
             WITH nearest_city AS (
-                SELECT geoname_id, city_name, country_code
+                SELECT geoname_id, city_name, country_code, ST_Y(geom::geometry) AS lat, ST_X(geom::geometry) AS lon
                 FROM cities
                 ORDER BY geom <-> ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)
                 LIMIT 1
             )
             SELECT nc.*, wc.temperature, wc.feels_like, wc.humidity,
-                   wc.wind_speed, wc.weather_code
+                   wc.wind_speed, wc.weather_code, wc.precipitation
             FROM nearest_city nc
             LEFT JOIN weather_current wc ON wc.location_id = nc.geoname_id;
         """)
@@ -353,7 +353,38 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
         row = result.mappings().first()
         if not row:
             return {"error": "No near weather station found."}
-        return dict(row)
+            
+        row_dict = dict(row)
+        if row_dict.get("temperature") is None:
+            # Fallback live fetch
+            try:
+                url = "https://api.open-meteo.com/v1/forecast"
+                params = {
+                    "latitude": row_dict["lat"],
+                    "longitude": row_dict["lon"],
+                    "current": (
+                        "temperature_2m,relative_humidity_2m,apparent_temperature,"
+                        "precipitation,weather_code,wind_speed_10m,wind_direction_10m"
+                    ),
+                    "timezone": "Asia/Bangkok",
+                    "forecast_days": 1,
+                }
+                data = await _fetch_with_cache(url, params)
+                cur = data.get("current", {})
+                row_dict.update({
+                    "temperature": cur.get("temperature_2m"),
+                    "feels_like": cur.get("apparent_temperature"),
+                    "humidity": cur.get("relative_humidity_2m"),
+                    "wind_speed": cur.get("wind_speed_10m"),
+                    "precipitation": cur.get("precipitation"),
+                    "condition": _wmo_desc(cur.get("weather_code", 0))
+                })
+            except Exception as e:
+                logger.error(f"Failed live fetch in get_weather_by_coords: {e}")
+        else:
+            row_dict["condition"] = _wmo_desc(row_dict.get("weather_code", 0))
+            
+        return row_dict
 
     # ── compare_cities ────────────────────────────────────────────────────────
     elif name == "compare_cities":

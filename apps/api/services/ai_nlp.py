@@ -1,11 +1,12 @@
 import re
 import logging
 from underthesea import ner
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from datetime import datetime
 import unicodedata
+from flashtext import KeywordProcessor
 
 def remove_accents(input_str):
     if not input_str:
@@ -43,6 +44,45 @@ class LocalNLPModel:
             "thái bình", "thái nguyên", "thanh hóa", "thừa thiên huế", "huế",
             "tiền giang", "trà vinh", "tuyên quang", "vĩnh long", "vĩnh phúc", "yên bái"
         ]
+        self.keyword_processor = KeywordProcessor(case_sensitive=False)
+        self._is_initialized = False
+
+    async def _initialize_keywords(self, db: AsyncSession):
+        if self._is_initialized:
+            return
+            
+        logger.info("Initializing FlashText KeywordProcessor with VN locations...")
+        query = text("SELECT city_name, ascii_name FROM cities WHERE country_code = 'VN'")
+        result = await db.execute(query)
+        
+        # Load all 53k cities into memory for O(1) text extraction
+        for row in result:
+            city_name = row[0]
+            ascii_name = row[1]
+            if city_name:
+                self.keyword_processor.add_keyword(city_name.lower(), city_name)
+            if ascii_name:
+                self.keyword_processor.add_keyword(ascii_name.lower(), city_name)
+                
+        # Add all VN provinces as keywords to prevent partial matches 
+        # (e.g. extracting "Hồ" instead of "Hồ Chí Minh")
+        for province in self.vn_provinces:
+            # handle special cases for title capitalization
+            title_province = province.title()
+            if title_province == "Hồ Chí Minh":
+                title_province = "Ho Chi Minh City"
+            self.keyword_processor.add_keyword(province.lower(), title_province)
+                
+        # Also add common aliases
+        self.keyword_processor.add_keyword("sài gòn", "Ho Chi Minh City")
+        self.keyword_processor.add_keyword("sg", "Ho Chi Minh City")
+        self.keyword_processor.add_keyword("hn", "Hà Nội")
+        self.keyword_processor.add_keyword("đn", "Đà Nẵng")
+        self.keyword_processor.add_keyword("hcm", "Ho Chi Minh City")
+        self.keyword_processor.add_keyword("hcmc", "Ho Chi Minh City")
+        
+        self._is_initialized = True
+        logger.info("FlashText initialization complete.")
         
     def classify_intent(self, text_input: str) -> str:
         text_input = text_input.lower()
@@ -53,8 +93,8 @@ class LocalNLPModel:
         return "current_weather" # Default intent
         
     def extract_time(self, text_input: str) -> str:
-        # Match pattern: <number> [giờ|h] [sáng|trưa|chiều|tối|đêm]
-        match = re.search(r'(\d{1,2})\s*(?:giờ|h)(?:\s*(sáng|trưa|chiều|tối|đêm))?', text_input, re.IGNORECASE)
+        # Match pattern: <number> [giờ|h|g] [sáng|trưa|chiều|tối|đêm]
+        match = re.search(r'(\d{1,2})\s*(?:giờ|h|g)\b(?:\s*(sáng|trưa|chiều|tối|đêm))?', text_input, re.IGNORECASE)
         if match:
             hour = int(match.group(1))
             meridiem = match.group(2)
@@ -68,24 +108,26 @@ class LocalNLPModel:
                 return f"{hour:02d}:00"
         return None
         
-    def extract_location(self, text_input: str) -> str:
+    async def extract_location(self, text_input: str, db: AsyncSession) -> str:
+        # Lazy initialization of flashtext with DB
+        if not self._is_initialized:
+            await self._initialize_keywords(db)
+            
+        # 1. First try FlashText (handles all 53k+ communes, districts, provinces instantly)
+        extracted = self.keyword_processor.extract_keywords(text_input.lower())
+        if extracted:
+            return extracted[-1]
+            
+        # 2. Try Underthesea NER as fallback
         try:
             tokens = ner(text_input)
-            loc_parts = []
-            
-            # tokens is a list of tuples: (word, pos_tag, chunk_tag, ner_label)
-            for token in tokens:
-                if len(token) >= 4:
-                    word, pos, chunk, label = token[0], token[1], token[2], token[3]
-                    if "LOC" in label or pos == "Np":
-                        loc_parts.append(word)
-            
-            if loc_parts:
-                return " ".join(loc_parts).replace("_", " ")
+            for word, pos, chunk, label in tokens:
+                if label == 'B-LOC' or label == 'I-LOC':
+                    return word
         except Exception as e:
             logger.warning(f"NER extraction failed: {e}")
             
-        # Fallback regex for cities if NER fails
+        # 3. Fallback regex for cities
         match = re.search(r'(tại|ở|thời tiết|cho) ([\w\s]+)', text_input, re.IGNORECASE)
         if match:
             loc = match.group(2).strip()
@@ -94,12 +136,6 @@ class LocalNLPModel:
                 loc = loc.replace(sw, "")
             return loc.strip()
             
-        # Hardcoded fallback for 63 provinces and common aliases
-        lower_input = text_input.lower()
-        for prov in self.vn_provinces:
-            if prov in lower_input:
-                return prov
-                
         return None
 
     async def get_city_coords(self, city_name: str, db: AsyncSession) -> Tuple[float, float, str]:
@@ -111,10 +147,22 @@ class LocalNLPModel:
         query = text("""
             SELECT city_name, ST_Y(geom::geometry) as lat, ST_X(geom::geometry) as lon 
             FROM cities 
-            WHERE city_name ILIKE :name OR ascii_name ILIKE :ascii_name 
+            WHERE city_name ILIKE :exact_name 
+               OR ascii_name ILIKE :exact_ascii
+               OR city_name ILIKE :like_name 
+               OR ascii_name ILIKE :like_ascii
+            ORDER BY 
+               (city_name ILIKE :exact_name OR ascii_name ILIKE :exact_ascii) DESC,
+               (country_code = 'VN') DESC,
+               population DESC NULLS LAST
             LIMIT 1
         """)
-        result = await db.execute(query, {"name": f"%{city_name}%", "ascii_name": f"%{ascii_city}%"})
+        result = await db.execute(query, {
+            "exact_name": city_name,
+            "exact_ascii": ascii_city,
+            "like_name": f"%{city_name}%", 
+            "like_ascii": f"%{ascii_city}%"
+        })
         row = result.mappings().first()
         if row:
             return row['lat'], row['lon'], row['city_name']

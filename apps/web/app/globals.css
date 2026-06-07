@@ -701,3 +701,128 @@ html, body {
 .user .markdown-body th {
   background-color: rgba(0, 0, 0, 0.05);
 }
+
+/* Model Selector Dropdown UI */
+.model-selector-container {
+  position: relative;
+  margin-left: auto;
+}
+
+.model-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  color: #e2e8f0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.model-selector-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.model-selector-chevron {
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+}
+
+.model-selector-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 256px;
+  border-radius: 12px;
+  background-color: #202124;
+  border: 1px solid #3c4043;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  z-index: 50;
+}
+
+.model-selector-dropdown-inner {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.model-selector-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  width: 100%;
+  text-align: left;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.model-selector-option:hover {
+  background-color: #303134;
+}
+
+.model-selector-check-container {
+  width: 20px;
+  padding-top: 2px;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.model-selector-check {
+  width: 20px;
+  height: 20px;
+  color: #e2e8f0;
+}
+
+.model-selector-option-content {
+  flex: 1;
+}
+
+.model-selector-option-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-selector-option-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.model-selector-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid;
+}
+
+.model-selector-badge.local {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.model-selector-badge.gemini {
+  background-color: #374151;
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+.model-selector-option-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 4px;
+  margin-bottom: 0;
+}

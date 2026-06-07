@@ -391,7 +391,7 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
 
 async def run_local_nlp_chat(message: str, db: AsyncSession):
     intent = nlp_service.classify_intent(message)
-    location = nlp_service.extract_location(message)
+    location = await nlp_service.extract_location(message, db)
     target_time = nlp_service.extract_time(message)
     
     response_text = ""
@@ -471,10 +471,14 @@ async def run_local_nlp_chat(message: str, db: AsyncSession):
 async def chat_stream(
     message: str = Query(..., min_length=1),
     history_json: str = Query("[]"),
+    model: str = Query("local"),
     db: AsyncSession = Depends(get_db)
 ):
-    # Use Local NLP Model entirely
-    return StreamingResponse(run_local_nlp_chat(message, db), media_type="text/event-stream")
+    if model == "gemini":
+        history = json.loads(history_json) if history_json else []
+        return StreamingResponse(run_gemini_chat(message, history, db), media_type="text/event-stream")
+    else:
+        return StreamingResponse(run_local_nlp_chat(message, db), media_type="text/event-stream")
 
 @router.post("/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
