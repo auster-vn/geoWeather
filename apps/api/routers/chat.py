@@ -182,6 +182,11 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
         except ValueError:
             pass
 
+    target_hour = None
+    hour_match = re.search(r'(?<!\d)(\d{1,2})\s*(h|giờ|g)', clean_msg)
+    if hour_match:
+        target_hour = int(hour_match.group(1))
+
     async def extract_city(msg_str: str):
         # Check for explicit coordinates first
         coords_match = re.search(r'lat:\s*([0-9.-]+).*lon:\s*([0-9.-]+)', msg_str, re.IGNORECASE)
@@ -297,6 +302,43 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
                     lines.append(f"- {h['time']}: {bar} {h['precip_prob_pct']}% — {h['precipitation_mm']} mm")
             response_text = "\n".join(lines)
 
+    elif city_to_query and target_hour is not None:
+        from apps.api.tools.weather_tools import _fetch_open_meteo_forecast
+        try:
+            forecast_data = await _fetch_open_meteo_forecast(city_to_query["lat"], city_to_query["lon"], tz="Asia/Bangkok")
+            hourly = forecast_data.get("hourly", {})
+            times = hourly.get("time", [])
+            
+            idx = -1
+            target_time_str = f"T{target_hour:02d}:00"
+            for i, t in enumerate(times):
+                if target_date and f"{target_date}{target_time_str}" in t:
+                    idx = i
+                    break
+                elif not target_date and target_time_str in t and i < 48:
+                    # Next occurrence of this hour
+                    idx = i
+                    break
+                    
+            if idx != -1:
+                temp = hourly.get("temperature_2m", [])[idx]
+                prob = hourly.get("precipitation_probability", [])[idx]
+                precip = hourly.get("precipitation", [])[idx]
+                
+                response_text = (
+                    f"🌍 Thời tiết tại **{city_to_query['city_name']}** lúc **{target_hour}h** "
+                    f"({'ngày ' + target_date if target_date else 'hôm nay/ngày mai'}):\n\n"
+                    f"- 🌡️ **Nhiệt độ:** {temp:.1f}°C\n"
+                    f"- 💧 **Xác suất mưa:** {prob}%\n"
+                    f"- 🌧️ **Lượng mưa:** {precip:.1f} mm\n\n"
+                    "Hỏi thêm: \"Khi nào mưa?\", \"Hoàng hôn mấy giờ?\" 😊"
+                )
+            else:
+                response_text = "Không tìm thấy dữ liệu dự báo cho khung giờ này."
+        except Exception as e:
+            logger.error(f"Error fetching hourly forecast: {e}")
+            response_text = "Lỗi khi tải dữ liệu dự báo theo giờ."
+
     elif city_to_query:
         weather_info = await execute_tool("get_weather_by_city", {"city_name": city_to_query["city_name"]}, db)
         if "error" in weather_info or "note" in weather_info:
@@ -304,6 +346,9 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
                              f"[MAP:{city_to_query['lat']},{city_to_query['lon']},10] "
                              "nhưng chưa có dữ liệu thời tiết thực. Hãy chạy đồng bộ dữ liệu!")
         else:
+            def fmt(val):
+                return f"{float(val):.1f}" if isinstance(val, (int, float)) else val
+
             wcode = weather_info.get('weather_code', 0) or 0
             desc_map = {(0,): "Trời quang ☀️", (1,2,3): "Có mây ⛅",
                         (45,48): "Sương mù 🌫️", (51,53,55,61,63,65): "Có mưa 🌧️",
@@ -312,12 +357,12 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
             response_text = (
                 f"🌍 Thời tiết hiện tại tại **{city_to_query['city_name']}** "
                 f"[MAP:{city_to_query['lat']},{city_to_query['lon']},10]:\n\n"
-                f"- 🌡️ **Nhiệt độ:** {weather_info.get('temperature', '?')}°C "
-                f"(cảm giác {weather_info.get('feels_like', '?')}°C)\n"
+                f"- 🌡️ **Nhiệt độ:** {fmt(weather_info.get('temperature', '?'))}°C "
+                f"(cảm giác {fmt(weather_info.get('feels_like', '?'))}°C)\n"
                 f"- 🌤️ **Trạng thái:** {desc}\n"
-                f"- 💧 **Độ ẩm:** {weather_info.get('humidity', '?')}%\n"
-                f"- 💨 **Gió:** {weather_info.get('wind_speed', '?')} m/s\n"
-                f"- 🌧️ **Lượng mưa:** {weather_info.get('precipitation', 0)} mm\n\n"
+                f"- 💧 **Độ ẩm:** {fmt(weather_info.get('humidity', '?'))}%\n"
+                f"- 💨 **Gió:** {fmt(weather_info.get('wind_speed', '?'))} m/s\n"
+                f"- 🌧️ **Lượng mưa:** {fmt(weather_info.get('precipitation', 0))} mm\n\n"
                 "Hỏi thêm: \"Khi nào mưa?\", \"Hoàng hôn mấy giờ?\" 😊"
             )
     else:
