@@ -24,10 +24,12 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run Linter
-        run: npm run lint --workspace=apps/web
+        working-directory: ./apps/web
+        run: npm run lint
 
       - name: Build Web App
-        run: npm run build --workspace=apps/web
+        working-directory: ./apps/web
+        run: npm run build
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
           NEXT_PUBLIC_MAPLIBRE_STYLE: https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json
