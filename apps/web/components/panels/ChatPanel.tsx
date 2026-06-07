@@ -208,8 +208,14 @@ export function ChatPanel() {
     }
 
     recognition.onerror = (event: any) => {
-      console.error("Speech recognition error", event.error)
       setIsListening(false)
+      if (event.error === 'network') {
+        alert("Lỗi kết nối dịch vụ nhận diện giọng nói gốc. Điều này thường xảy ra nếu bạn đang dùng trình duyệt Chromium, Brave, hoặc môi trường giả lập không có sẵn API key của Google Speech. Vui lòng mở trang web này trên Google Chrome hoặc Edge để sử dụng.")
+        console.warn("Speech recognition network error: Trình duyệt không hỗ trợ Web Speech API.")
+      } else {
+        console.warn("Speech recognition error:", event.error)
+        alert(`Lỗi nhận diện giọng nói: ${event.error}`)
+      }
     }
 
     recognition.onend = () => {
