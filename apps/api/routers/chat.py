@@ -2,9 +2,12 @@ import json
 import asyncio
 import logging
 from datetime import date as date_cls
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+import speech_recognition as sr
+import tempfile
+import os
 
 from ..core.config import settings
 from ..core.database import get_db
@@ -404,3 +407,26 @@ async def chat_stream(
         return StreamingResponse(run_gemini_chat(message, history, db), media_type="text/event-stream")
     else:
         return StreamingResponse(run_mock_chat(message, db, history), media_type="text/event-stream")
+
+@router.post("/transcribe")
+async def transcribe_audio(audio: UploadFile = File(...)):
+    try:
+        audio_bytes = await audio.read()
+        
+        # Write bytes to temporary WAV file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(audio_bytes)
+            tmp_path = tmp.name
+            
+        r = sr.Recognizer()
+        with sr.AudioFile(tmp_path) as source:
+            audio_data = r.record(source)
+            text = r.recognize_google(audio_data, language="vi-VN")
+            
+        os.remove(tmp_path)
+        return {"text": text}
+    except sr.UnknownValueError:
+        return {"error": "Không thể nhận diện giọng nói. Bạn có thể nói lại rõ hơn không?"}
+    except Exception as e:
+        logger.error(f"STT Error: {e}")
+        return {"error": str(e)}
