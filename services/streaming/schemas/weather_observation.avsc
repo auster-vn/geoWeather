@@ -1,0 +1,28 @@
+{
+  "namespace": "geoweather.observations",
+  "type": "record",
+  "name": "WeatherObservation",
+  "fields": [
+    {"name": "observation_id", "type": "string"},
+    {"name": "location_id",    "type": "int"},
+    {"name": "city_name",      "type": "string"},
+    {"name": "country_code",   "type": "string"},
+    {"name": "latitude",       "type": "double"},
+    {"name": "longitude",      "type": "double"},
+    {"name": "h3_index_r4",    "type": ["null", "string"], "default": null},
+    {"name": "h3_index_r7",    "type": ["null", "string"], "default": null},
+    {"name": "observed_at",    "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "temperature",    "type": ["null", "float"], "default": null},
+    {"name": "feels_like",     "type": ["null", "float"], "default": null},
+    {"name": "humidity",       "type": ["null", "int"],   "default": null},
+    {"name": "wind_speed",     "type": ["null", "float"], "default": null},
+    {"name": "wind_direction", "type": ["null", "int"],   "default": null},
+    {"name": "precipitation",  "type": ["null", "float"], "default": null},
+    {"name": "weather_code",   "type": ["null", "int"],   "default": null},
+    {"name": "pressure",       "type": ["null", "float"], "default": null},
+    {"name": "visibility",     "type": ["null", "int"],   "default": null},
+    {"name": "uv_index",       "type": ["null", "float"], "default": null},
+    {"name": "cloud_cover",    "type": ["null", "int"],   "default": null},
+    {"name": "schema_version", "type": "int", "default": 1}
+  ]
+}

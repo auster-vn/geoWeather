@@ -1,0 +1,274 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import { MapboxOverlay } from '@deck.gl/mapbox'
+import { ScatterplotLayer } from '@deck.gl/layers'
+import { HeatmapLayer, HexagonLayer } from '@deck.gl/aggregation-layers'
+import { useWeatherStore } from '../../store/weather'
+import { Activity, Thermometer, Wind } from 'lucide-react'
+
+// Color scales helper
+const TEMPERATURE_COLORS: [number, number, number][] = [
+  [0, 0, 255],     // Extreme Cold (Blue)
+  [0, 128, 255],   // Cold (Light Blue)
+  [0, 255, 128],   // Cool (Teal)
+  [255, 255, 0],   // Warm (Yellow)
+  [255, 128, 0],   // Hot (Orange)
+  [255, 0, 0]      // Extreme Hot (Red)
+]
+
+function getTemperatureColor(temp: number): [number, number, number] {
+  if (temp < 0) return TEMPERATURE_COLORS[0]
+  if (temp < 10) return TEMPERATURE_COLORS[1]
+  if (temp < 20) return TEMPERATURE_COLORS[2]
+  if (temp < 30) return TEMPERATURE_COLORS[3]
+  if (temp < 38) return TEMPERATURE_COLORS[4]
+  return TEMPERATURE_COLORS[5]
+}
+
+export function WeatherMap() {
+  const mapContainerRef = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const overlayRef = useRef<MapboxOverlay | null>(null)
+  const [weatherPoints, setWeatherPoints] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [errorLog, setErrorLog] = useState<string | null>(null)
+
+  const { activeLayer, selectedLocation, setSelectedLocation, mapViewport, setMapViewport } = useWeatherStore()
+
+  // Fetch weather points from FastAPI
+  useEffect(() => {
+    const fetchPoints = async () => {
+      try {
+        const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+        const res = await fetch(`${apiHost}/api/v1/weather/all`)
+        if (res.ok) {
+          const data = await res.json()
+          setWeatherPoints(data)
+        }
+      } catch (err: any) {
+        console.error("Failed to load weather points:", err)
+        setErrorLog((prev) => (prev ? prev + "\n" : "") + `API point fetch failed: ${err.message || err.toString()}`)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchPoints()
+    // Poll updates every 30 seconds
+    const interval = setInterval(fetchPoints, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Initialize MapLibre GL
+  useEffect(() => {
+    if (!mapContainerRef.current) return
+
+    const styleUrl = process.env.NEXT_PUBLIC_MAPLIBRE_STYLE || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+    
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: mapContainerRef.current,
+        style: styleUrl,
+        center: [mapViewport.longitude, mapViewport.latitude],
+        zoom: mapViewport.zoom,
+        pitch: mapViewport.pitch,
+        trackResize: true
+      })
+      mapRef.current = map
+
+      map.on('error', (e: any) => {
+        console.error("MapLibre GL error event:", e)
+        const msg = e.error?.message || e.message || (e.error ? e.error.toString() : JSON.stringify(e))
+        setErrorLog((prev) => (prev ? prev + "\n" : "") + `Map event error: ${msg}`)
+      })
+
+      // Add zoom and rotation controls
+      map.addControl(new maplibregl.NavigationControl(), 'top-right')
+
+      map.on('load', () => {
+        map.resize()
+      })
+
+      setTimeout(() => {
+        if (mapRef.current) mapRef.current.resize()
+      }, 500)
+    } catch (err: any) {
+      console.error("Failed to initialize MapLibre Map:", err)
+      setErrorLog(`Map constructor crash: ${err.message || err.toString()}`)
+      return
+    }
+
+    // Track map movements and update state
+    map.on('moveend', () => {
+      const center = map.getCenter()
+      setMapViewport({
+        longitude: center.lng,
+        latitude: center.lat,
+        zoom: map.getZoom(),
+        pitch: map.getPitch()
+      })
+    })
+
+    return () => {
+      map.remove()
+    }
+  }, [])
+
+  // Fly to selectedLocation when it updates from external components (e.g. ChatPanel)
+  useEffect(() => {
+    if (selectedLocation && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [selectedLocation.lon, selectedLocation.lat],
+        zoom: 9,
+        essential: true,
+        duration: 2500
+      })
+    }
+  }, [selectedLocation])
+
+  // Setup Deck.gl Layers overlay
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || weatherPoints.length === 0) return
+
+    // Create or update Deck.gl overlay
+    const layers = []
+
+    if (activeLayer === 'scatterplot') {
+      layers.push(
+        new ScatterplotLayer({
+          id: 'weather-points',
+          data: weatherPoints,
+          getPosition: (d: any) => [d.longitude, d.latitude],
+          getFillColor: (d: any) => getTemperatureColor(d.temperature),
+          getRadius: 15000,
+          radiusMinPixels: 4,
+          radiusMaxPixels: 15,
+          pickable: true,
+          onClick: ({ object }: any) => {
+            if (object) {
+              setSelectedLocation({
+                lat: object.latitude,
+                lon: object.longitude,
+                cityName: object.city_name,
+                countryCode: object.country_code
+              })
+            }
+          }
+        })
+      )
+    } else if (activeLayer === 'heatmap') {
+      layers.push(
+        new HeatmapLayer({
+          id: 'temperature-heatmap',
+          data: weatherPoints,
+          getPosition: (d: any) => [d.longitude, d.latitude],
+          getWeight: (d: any) => d.temperature + 40, // normalize
+          radiusPixels: 50,
+          intensity: 1,
+          threshold: 0.05
+        })
+      )
+    } else if (activeLayer === 'hexagon') {
+      layers.push(
+        new HexagonLayer({
+          id: 'temperature-hexagon',
+          data: weatherPoints,
+          getPosition: (d: any) => [d.longitude, d.latitude],
+          getElevationWeight: (d: any) => d.wind_speed || 0,
+          getColorWeight: (d: any) => d.temperature || 0,
+          radius: 60000,
+          elevationScale: 800,
+          extruded: true,
+          pickable: true,
+          onClick: ({ object }: any) => {
+            if (object && object.points && object.points.length > 0) {
+              const item = object.points[0].source
+              setSelectedLocation({
+                lat: item.latitude,
+                lon: item.longitude,
+                cityName: item.city_name,
+                countryCode: item.country_code
+              })
+            }
+          }
+        })
+      )
+    }
+
+    if (!overlayRef.current) {
+      const overlay = new MapboxOverlay({ layers })
+      map.addControl(overlay)
+      overlayRef.current = overlay
+    } else {
+      overlayRef.current.setProps({ layers })
+    }
+  }, [weatherPoints, activeLayer])
+
+  return (
+    <div className="relative" style={{ width: '100%', height: '100%' }}>
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%', backgroundColor: '#020617' }} />
+      
+      {errorLog && (
+        <div style={{ position: 'absolute', top: '90px', left: '20px', right: '20px', padding: '16px', background: 'rgba(239, 68, 68, 0.95)', border: '1px solid #dc2626', color: 'white', borderRadius: '12px', zIndex: 9999, fontSize: '11px', fontFamily: 'monospace', whiteSpace: 'pre-wrap', pointerEvents: 'auto', maxHeight: '180px', overflowY: 'auto' }}>
+          <strong>Map Error Log:</strong>
+          <pre style={{ margin: '8px 0 0 0', whiteSpace: 'pre-wrap' }}>{errorLog}</pre>
+        </div>
+      )}
+      
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm z-50">
+          <div className="flex flex-col items-center gap-3 text-emerald-400 font-medium">
+            <Activity className="animate-spin w-8 h-8" />
+            <span>Nạp bản đồ GIS thời tiết...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Legend & Controls overlay */}
+      <div className="map-legend">
+        <h4 className="map-legend-title">
+          <Thermometer className="w-4 h-4" /> GeoWeather Legend
+        </h4>
+        
+        {activeLayer === 'hexagon' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+              <span>Màu: Nhiệt độ (°C)</span>
+              <span>Cột: Gió (m/s)</span>
+            </div>
+            <div style={{ height: '8px', width: '100%', borderRadius: '4px', background: 'linear-gradient(to right, #3b82f6, #facc15, #ef4444)' }} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '9px' }}>
+              <span>&lt; 0°C</span>
+              <span>20°C</span>
+              <span>&gt; 38°C</span>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="map-legend-color-dot" style={{ background: '#2563eb' }} />
+              <span>Dưới 10°C (Lạnh)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="map-legend-color-dot" style={{ background: '#34d399' }} />
+              <span>10°C - 20°C (Mát mẻ)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="map-legend-color-dot" style={{ background: '#facc15' }} />
+              <span>20°C - 30°C (Ấm áp)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="map-legend-color-dot" style={{ background: '#ef4444' }} />
+              <span>Trên 30°C (Nóng)</span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
