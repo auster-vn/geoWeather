@@ -6,9 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from apps.api.core.database import init_db, close_db
-from apps.api.core.redis import init_redis, close_redis
+from apps.api.core.redis import init_redis, close_redis, get_redis
 from apps.api.core.telemetry import setup_telemetry
 from apps.api.routers import weather, locations, tiles, websocket, chat
+
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 
 # Setup logger
 logging.basicConfig(
@@ -24,6 +27,10 @@ async def lifespan(app: FastAPI):
     await init_db()
     # Initialize Redis
     await init_redis()
+    
+    # Initialize FastAPI Cache using the redis client
+    redis_client = await get_redis()
+    FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
     
     # Start Redis WebSocket pub/sub listener as background task
     listener_task = asyncio.create_task(websocket.redis_listener())

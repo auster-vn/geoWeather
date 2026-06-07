@@ -12,6 +12,7 @@ import os
 from ..core.config import settings
 from ..core.database import get_db
 from ..tools.weather_tools import weather_tool_definitions, execute_tool
+from ..services.ai_nlp import nlp_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -388,7 +389,69 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
     yield "data: [DONE]\n\n"
 
 
-# ─── Endpoint ─────────────────────────────────────────────────────────────────
+async def run_local_nlp_chat(message: str, db: AsyncSession):
+    intent = nlp_service.classify_intent(message)
+    location = nlp_service.extract_location(message)
+    
+    response_text = ""
+    
+    if location:
+        lat, lon, city_name = await nlp_service.get_city_coords(location, db)
+        if lat and lon:
+            if intent == "rain" or intent == "forecast":
+                from ..tools.weather_tools import execute_tool
+                forecast = await execute_tool("get_rain_forecast", {"city_name": city_name}, db)
+                if "error" in forecast:
+                    response_text = f"Xin lỗi, {forecast['error']}"
+                else:
+                    rain_info = forecast.get('first_likely_rain', {})
+                    response_text = (
+                        f"🌧️ **Dự báo mưa cho {city_name}** [MAP:{lat},{lon},10]:\n\n"
+                        f"- ☔ Thời gian mưa gần nhất: {rain_info.get('time', 'Không rõ')}\n"
+                        f"- 🌡️ Nhiệt độ lúc mưa: {rain_info.get('temperature', '?')}°C\n"
+                        f"- 💧 Lượng mưa dự kiến: {rain_info.get('precipitation_mm', '?')} mm\n"
+                        f"- ☁️ Trạng thái: {rain_info.get('condition', '?')}\n\n"
+                        f"*(Dự báo dựa trên Open-Meteo)*"
+                    )
+            elif intent == "sun":
+                from ..tools.weather_tools import execute_tool
+                sun = await execute_tool("get_sun_times", {"city_name": city_name}, db)
+                if "error" in sun:
+                    response_text = f"Xin lỗi, {sun['error']}"
+                else:
+                    response_text = (
+                        f"🌅 **Thời gian Mặt trời tại {city_name}** [MAP:{lat},{lon},10]:\n\n"
+                        f"- Bình minh: {sun.get('sunrise_time', '?')}\n"
+                        f"- Hoàng hôn: {sun.get('sunset_time', '?')}"
+                    )
+            else:
+                from ..tools.weather_tools import execute_tool
+                weather = await execute_tool("get_weather_by_coords", {"lat": lat, "lon": lon}, db)
+                if "error" in weather:
+                    response_text = f"Xin lỗi, {weather['error']}"
+                else:
+                    def fmt(v): return round(v, 1) if isinstance(v, float) else v
+                    response_text = (
+                        f"🌍 **Thời tiết hiện tại tại {city_name}** [MAP:{lat},{lon},10]:\n\n"
+                        f"- 🌡️ Nhiệt độ: {fmt(weather.get('temperature', '?'))}°C (cảm giác {fmt(weather.get('feels_like', '?'))}°C)\n"
+                        f"- 💧 Độ ẩm: {fmt(weather.get('humidity', '?'))}%\n"
+                        f"- 💨 Gió: {fmt(weather.get('wind_speed', '?'))} m/s\n"
+                        f"- 🌧️ Lượng mưa: {fmt(weather.get('precipitation', 0))} mm"
+                    )
+        else:
+            response_text = f"Xin lỗi, tôi không tìm thấy dữ liệu cho khu vực '{location}'. Bạn có thể gõ rõ tên tỉnh thành bằng tiếng Việt có dấu được không?"
+    else:
+        # If no location is found
+        if "chào" in message.lower():
+            response_text = "Chào bạn! Tôi là GeoWeather Assistant (Local AI). Bạn cần xem thời tiết ở đâu?"
+        else:
+            response_text = "Bạn vui lòng cung cấp tên Tỉnh/Thành phố rõ ràng để tôi tra cứu nhé (VD: 'thời tiết Hà Nội', 'khi nào Sài Gòn mưa')."
+            
+    words = response_text.split(" ")
+    for word in words:
+        yield f"data: {json.dumps({'type': 'text', 'content': word + ' '})}\n\n"
+        await asyncio.sleep(0.04)
+    yield "data: [DONE]\n\n"
 
 @router.get("/stream")
 async def chat_stream(
@@ -396,17 +459,8 @@ async def chat_stream(
     history_json: str = Query("[]"),
     db: AsyncSession = Depends(get_db)
 ):
-    try:
-        history = json.loads(history_json)
-    except Exception:
-        history = []
-
-    has_gemini = bool(settings.GEMINI_API_KEY and settings.GEMINI_API_KEY not in ("", "mock-key-for-now"))
-
-    if has_gemini:
-        return StreamingResponse(run_gemini_chat(message, history, db), media_type="text/event-stream")
-    else:
-        return StreamingResponse(run_mock_chat(message, db, history), media_type="text/event-stream")
+    # Use Local NLP Model entirely
+    return StreamingResponse(run_local_nlp_chat(message, db), media_type="text/event-stream")
 
 @router.post("/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):

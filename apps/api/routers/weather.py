@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from shapely.geometry import LineString
 from typing import List
+from fastapi_cache.decorator import cache
 
 from ..core.database import get_db, get_ts_db
 from ..core.telemetry import spatial_query_duration
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/nearest/{lat}/{lon}", response_model=WeatherResponse)
+@cache(expire=300)
 async def get_nearest_weather(lat: float, lon: float, db: AsyncSession = Depends(get_db)):
     """
     Find the nearest city and return its latest weather.
@@ -221,6 +223,7 @@ async def get_sync_status():
     return {"is_syncing": sync_lock.locked()}
 
 @router.get("/forecast/{lat}/{lon}")
+@cache(expire=900)
 async def get_forecast(lat: float, lon: float):
     """
     Fetch 7-day detailed forecast from Open-Meteo for the dashboard.
