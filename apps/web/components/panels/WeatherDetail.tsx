@@ -23,7 +23,6 @@ export function WeatherDetail() {
   useEffect(() => {
     if (!selectedLocation) {
       setWeather(null)
-      setHistory([])
       return
     }
 
