@@ -1,99 +1,108 @@
-# GeoWeather Intelligence Platform
+<div align="center">
+  <img src="apps/web/public/globe.svg" width="100" height="100" alt="GeoWeather Logo" />
+  <h1>GeoWeather Intelligence Platform</h1>
+  <p>
+    <strong>A high-performance, real-time spatial weather analytics platform built with Rust, Go, FastAPI, and Next.js.</strong>
+  </p>
 
-GeoWeather is a highly scalable, real-time geospatial weather intelligence platform. It ingests, processes, and visualizes large-scale meteorological data mapped to geospatial indexes, combining high-performance data streaming with natural language AI interfaces.
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+  [![Next.js](https://img.shields.io/badge/Next.js-black?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
+  [![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+  [![Uber H3](https://img.shields.io/badge/Uber_H3-GeoSpatial-blue?style=flat)](https://h3geo.org/)
+</div>
 
-## 1. Overview and Core Concepts
+---
 
-The platform is designed to provide hyper-local weather insights. Instead of traditional point-based weather tracking, GeoWeather utilizes **Uber's H3 Hexagonal Hierarchical Spatial Index** to map weather data continuously across regions. 
+<div align="center">
+  <img src="screenshots/dashboard.png" alt="GeoWeather Platform Dashboard" width="100%" />
+</div>
 
-Key capabilities include:
-- **Spatial Weather Visualization:** Rendering dynamic, color-coded H3 grid overlays on MapLibre GL based on real-time and historical weather parameters.
-- **AI-Powered Natural Language Interface:** Integrating with LLMs (Google Gemini) to allow users to ask complex weather queries (e.g., "Will it rain in District 1 tomorrow?") and receive data-backed responses with location context.
-- **High-Throughput Time-Series Storage:** Aggregating continuous streams of weather data into TimescaleDB for efficient historical lookups and forecasting.
+## 📌 Overview
 
-## 2. Architecture & Technology Stack
+**GeoWeather Intelligence Platform** is an enterprise-grade geospatial weather monitoring and analytics solution. It aggregates real-time meteorological data across vast geographic areas using **Uber's H3 Hexagonal Grid System**, processes streaming observations with **Bytewax/Kafka**, and visualizes massive datasets via a highly optimized **Next.js (React) / MapLibre** frontend.
 
-The project adopts a modern microservices architecture housed within a Polyglot Monorepo.
+Additionally, the platform features a deeply integrated **AI Weather Assistant** powered by **Gemini 2.5 Flash**, capable of understanding natural language queries, executing geospatial function calling, and providing Voice-to-Text meteorological analysis natively in the browser.
 
-### 2.1 Backend & Compute
-- **FastAPI (Python):** Serves as the primary backend for querying weather data and handling the LLM chat orchestration.
-- **Rust (PyO3 & Maturin):** A native Rust extension (`packages/core-rs`) is embedded within the Python backend to handle CPU-bound geospatial math and complex grid processing at bare-metal speeds.
-- **Go API Gateway:** A high-concurrency Go-based gateway layer to handle request routing and rate limiting.
+## 🚀 Key Features
 
-### 2.2 Streaming & Data Ingestion
-- **Kafka & Schema Registry:** Acts as the central nervous system for continuous, high-volume weather data ingestion.
-- **Python Ingestion Services:** Asynchronous workers that periodically fetch external meteorological APIs (e.g., Open-Meteo) and publish strictly-typed Avro events to Kafka.
-- **Bytewax:** A Python-based stream processing framework to aggregate real-time Kafka streams before persisting them.
+- **Real-time Geospatial Mapping:** Millions of data points clustered and rendered seamlessly using H3 hierarchical geospatial indexing and MapLibre GL.
+- **AI-Powered Weather Assistant:** Context-aware chatbot supporting Native Voice Queries (Web Speech API / AudioContext) with intelligent data extraction.
+- **Streaming Telemetry Analytics:** High-throughput event ingestion gateway (Go) and stream processing (Bytewax) for anomaly detection.
+- **Rust Compute Core:** High-performance computational engine for crunching complex geospatial polygons and real-time aggregations.
+- **Microservices Architecture:** Strictly typed, fully asynchronous microservices communicating via Redis Pub/Sub and Apache Kafka.
 
-### 2.3 Storage & Infrastructure
-- **TimescaleDB:** An extension of PostgreSQL optimized for fast ingest and complex queries over time-series data.
-- **PostGIS:** Manages geographic objects and spatial queries.
-- **Redis:** Serves as a fast, in-memory cache layer for frequent geographic lookups.
-- **MinIO:** S3-compatible object storage for static assets.
-- **Docker & Docker Compose:** Containerizes the entire infrastructure for local development and deployment.
+## 🏗️ Architecture & Technology Stack
 
-### 2.4 Frontend
-- **Next.js & React:** A responsive web dashboard.
-- **MapLibre GL & deck.gl:** Renders the map tiles and the interactive H3 hexagon overlays smoothly on the GPU.
-- **Recharts:** Powers the interactive 48-hour forecast and historical time-series charts.
+The platform is designed around a modern **Monorepo** structure managed by **Turborepo** and **UV**, ensuring blazing fast dependency resolution and build times.
 
-## 3. Monorepo Structure
+| Component | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend WebApp** | Next.js 15, React 19, MapLibre | High-performance GIS dashboard with WebSocket real-time updates. |
+| **Core API Backend** | FastAPI, Python 3.12, SQLAlchemy | Asynchronous API gateway handling AI orchestration and DB queries. |
+| **Ingestion Service** | Bytewax, Apache Kafka | Distributed stream processing for weather telemetry. |
+| **Geospatial Core** | Rust, PyO3 | Low-level optimization for H3 hexagonal grid aggregations. |
+| **Edge Gateway** | Go (Golang) | Ultra-low latency edge server for proxying IoT weather devices. |
+| **Database Layer** | PostgreSQL, PostGIS, TimescaleDB | Specialized time-series and spatial data storage. |
 
-The repository is managed using **Turborepo** for build orchestration, **UV** for Python workspaces, and **NPM Workspaces** for JavaScript/TypeScript packages.
+## 📂 Repository Structure
 
 ```text
 geoWeather/
-├── apps/                 # User-facing applications
-│   ├── web/              # Next.js Frontend Dashboard
-│   ├── api/              # FastAPI Backend (Python)
-│   └── gateway/          # Go API Gateway
-├── services/             # Background processing & data ingestion
-│   ├── ingestion/        # API data fetchers and Kafka producers
-│   └── streaming/        # Bytewax stream processors
-├── packages/             # Shared libraries across the monorepo
-│   └── core-rs/          # Rust library for fast geospatial calculations
-├── infra/                # Infrastructure configurations (K8s, Terraform, Docker SQL)
-├── scripts/              # Development scripts, testing, and scratchpads
-├── turbo.json            # Turborepo build pipeline configuration
-├── package.json          # Node.js workspace definitions
-└── pyproject.toml        # UV Python workspace definitions
+├── apps/
+│   ├── web/                # Next.js 15 Frontend GIS Dashboard
+│   ├── api/                # FastAPI Backend & AI Orchestrator
+│   └── gateway/            # Go Edge Gateway for device ingestion
+├── services/
+│   ├── ingestion/          # Bytewax / Kafka Streaming Analytics
+│   └── ...
+├── packages/
+│   ├── core-rs/            # Rust compute engine (PyO3)
+│   └── shared-types/       # Shared TypeScript / Python schemas
+├── infra/                  # Docker Compose, PostgreSQL init scripts
+└── README.md               # You are here
 ```
 
-## 4. Getting Started
+## 🛠️ Getting Started
 
 ### Prerequisites
-- **Docker** and **Docker Compose**
-- **Node.js** (v20+)
-- **UV** (Python package manager)
-- **Rust toolchain** (cargo/rustc) - for building the core extension
+- Docker & Docker Compose
+- Node.js >= 20.0
+- Python >= 3.12 & [UV Package Manager](https://github.com/astral-sh/uv)
+- Rust Toolchain (Optional, for core modifications)
 
-### Running the Infrastructure
+### 1. Infrastructure Setup
 
-Start all required databases and message brokers:
+Start the background services (PostgreSQL + PostGIS, Redis, Kafka) using Docker Compose:
+
 ```bash
-docker-compose up -d postgres timescaledb redis kafka schema-registry minio
+docker-compose up -d
 ```
 
-### Building the Project
+### 2. Backend API Initialization
 
-The monorepo uses Turborepo to orchestrate builds. To install Node dependencies and build the entire stack:
+The backend uses `uv` for lightning-fast environment setup.
+
 ```bash
+cd apps/api
+uv sync
+uv run uvicorn main:app --reload --port 8000
+```
+
+### 3. Frontend Web Dashboard
+
+Launch the Next.js application:
+
+```bash
+cd apps/web
 npm install
-npx turbo run build
+npm run dev
 ```
 
-To run the API and Web interface locally via Docker:
-```bash
-docker-compose build api web
-docker-compose up -d api web
-```
+Visit `http://localhost:3000` to access the interactive map and AI Assistant.
 
-## 5. Development Guidelines
+## 🤝 Contributing
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/auster-vn/geoWeather/issues).
 
-- **Python Services:** Managed via `uv`. The root `pyproject.toml` defines a workspace containing `apps/api` and `services/ingestion`. Use `uv sync` to resolve dependencies.
-- **Rust Core:** Any changes made in `packages/core-rs` require a rebuild of the Python bindings using `maturin build --release`.
-- **Environment Variables:** Each application directory contains an `.env.example` file detailing required configurations (such as database URLs and GEMINI_API_KEY). Ensure these are replicated to `.env` files locally.
-
-## 6. License
-
-Proprietary. All rights reserved.
+## 📄 License
+This project is licensed under the MIT License - see the LICENSE file for details.
