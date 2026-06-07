@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useWeatherStore } from '../../store/weather'
-import { Send, Sparkles, Loader2, Database, MapPin, Mic } from 'lucide-react'
+import { Send, Sparkles, Loader2, Database, MapPin, Mic, ChevronDown, Check } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChatWeatherChart } from './ChatWeatherChart'
@@ -26,7 +26,22 @@ export function ChatPanel() {
   const [toolStatus, setToolStatus] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [selectedModel, setSelectedModel] = useState<'local' | 'gemini'>('local')
+  const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const modelSelectorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
+        setIsModelSelectorOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
   
   const { setSelectedLocation } = useWeatherStore()
 
@@ -81,7 +96,7 @@ export function ChatPanel() {
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
     const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-    const eventSourceUrl = `${apiHost}/api/v1/chat/stream?message=${encodeURIComponent(userMessage)}&history_json=${encodeURIComponent(JSON.stringify(history))}`
+    const eventSourceUrl = `${apiHost}/api/v1/chat/stream?message=${encodeURIComponent(userMessage)}&history_json=${encodeURIComponent(JSON.stringify(history))}&model=${selectedModel}`
 
     try {
       const eventSource = new EventSource(eventSourceUrl)
@@ -295,6 +310,58 @@ export function ChatPanel() {
             <span className="chat-status-dot pulse-animation" />
             <span>Trực tuyến & Sẵn sàng</span>
           </div>
+        </div>
+        {/* Model Selector Dropdown */}
+        <div className="model-selector-container" ref={modelSelectorRef}>
+          <button 
+            onClick={() => setIsModelSelectorOpen(!isModelSelectorOpen)}
+            className="model-selector-btn"
+          >
+            {selectedModel === 'gemini' ? 'Gemini Flash' : 'Local AI'}
+            <ChevronDown className="model-selector-chevron" />
+          </button>
+          
+          {isModelSelectorOpen && (
+            <div className="model-selector-dropdown">
+              <div className="model-selector-dropdown-inner">
+                
+                {/* Local NLP Option */}
+                <button
+                  onClick={() => { setSelectedModel('local'); setIsModelSelectorOpen(false); }}
+                  className="model-selector-option"
+                >
+                  <div className="model-selector-check-container">
+                    {selectedModel === 'local' && <Check className="model-selector-check" />}
+                  </div>
+                  <div className="model-selector-option-content">
+                    <div className="model-selector-option-header">
+                      <span className="model-selector-option-title">Local AI</span>
+                      <span className="model-selector-badge local">Nhanh</span>
+                    </div>
+                    <p className="model-selector-option-desc">Phân tích siêu tốc & Offline</p>
+                  </div>
+                </button>
+
+                {/* Gemini Option */}
+                <button
+                  onClick={() => { setSelectedModel('gemini'); setIsModelSelectorOpen(false); }}
+                  className="model-selector-option"
+                >
+                  <div className="model-selector-check-container">
+                    {selectedModel === 'gemini' && <Check className="model-selector-check" />}
+                  </div>
+                  <div className="model-selector-option-content">
+                    <div className="model-selector-option-header">
+                      <span className="model-selector-option-title">2.5 Flash</span>
+                      <span className="model-selector-badge gemini">Mới</span>
+                    </div>
+                    <p className="model-selector-option-desc">Trợ giúp toàn diện</p>
+                  </div>
+                </button>
+
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

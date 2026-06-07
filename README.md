@@ -1,108 +1,76 @@
-<div align="center">
-  <img src="apps/web/public/globe.svg" width="100" height="100" alt="GeoWeather Logo" />
-  <h1>GeoWeather Intelligence Platform</h1>
-  <p>
-    <strong>A high-performance, real-time spatial weather analytics platform built with Rust, Go, FastAPI, and Next.js.</strong>
-  </p>
+# 🌍 GeoWeather Intelligence Platform
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
-  [![Next.js](https://img.shields.io/badge/Next.js-black?style=flat&logo=next.js&logoColor=white)](https://nextjs.org/)
-  [![Rust](https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-  [![Uber H3](https://img.shields.io/badge/Uber_H3-GeoSpatial-blue?style=flat)](https://h3geo.org/)
-</div>
+**GeoWeather** is an End-to-End Real-Time GIS & Weather Analytics System. It visualizes live weather data on an interactive WebGL map, supports real-time streaming, and features a dual AI-powered conversational assistant (Local NLP & Google Gemini) for advanced natural language location queries.
 
----
+## 🚀 Features
+- **Real-Time Map Visualization**: Next.js 16 WebGL interactive map using MapLibre GL JS and Deck.gl.
+- **Dual AI Assistant**: Toggle between **Gemini 2.5 Flash** for comprehensive answers and a **Local NLP Model (FlashText/Underthesea)** for ultra-fast, offline natural language location resolution.
+- **GIS Backend**: PostgreSQL with PostGIS for spatial data storage (over 53k+ administrative boundaries).
+- **Time-Series Data**: TimescaleDB for continuous ingestion of weather metrics.
+- **Streaming Pipeline**: Apache Kafka + Schema Registry + Python processor for real-time data ingestion.
+- **Modern Infrastructure**: Fully containerized with Docker, automated via CI/CD (GitHub Actions).
 
-<div align="center">
-  <img src="screenshots/dashboard.png" alt="GeoWeather Platform Dashboard" width="100%" />
-</div>
+## 🛠️ Tech Stack
+- **Frontend**: Next.js 16 (React 19), MapLibre GL, Deck.gl, Tailwind CSS.
+- **Backend API**: Python 3.11, FastAPI, SQLAlchemy, Underthesea (NLP), FlashText, Google GenAI SDK.
+- **Data Engineering**: Apache Kafka, Confluent Schema Registry, Redis.
+- **Databases**: PostgreSQL (PostGIS), TimescaleDB.
+- **Deployment**: Docker, Docker Compose, GitHub Actions.
 
-## 📌 Overview
-
-**GeoWeather Intelligence Platform** is an enterprise-grade geospatial weather monitoring and analytics solution. It aggregates real-time meteorological data across vast geographic areas using **Uber's H3 Hexagonal Grid System**, processes streaming observations with **Bytewax/Kafka**, and visualizes massive datasets via a highly optimized **Next.js (React) / MapLibre** frontend.
-
-Additionally, the platform features a deeply integrated **AI Weather Assistant** powered by **Gemini 2.5 Flash**, capable of understanding natural language queries, executing geospatial function calling, and providing Voice-to-Text meteorological analysis natively in the browser.
-
-## 🚀 Key Features
-
-- **Real-time Geospatial Mapping:** Millions of data points clustered and rendered seamlessly using H3 hierarchical geospatial indexing and MapLibre GL.
-- **AI-Powered Weather Assistant:** Context-aware chatbot supporting Native Voice Queries (Web Speech API / AudioContext) with intelligent data extraction.
-- **Streaming Telemetry Analytics:** High-throughput event ingestion gateway (Go) and stream processing (Bytewax) for anomaly detection.
-- **Rust Compute Core:** High-performance computational engine for crunching complex geospatial polygons and real-time aggregations.
-- **Microservices Architecture:** Strictly typed, fully asynchronous microservices communicating via Redis Pub/Sub and Apache Kafka.
-
-## 🏗️ Architecture & Technology Stack
-
-The platform is designed around a modern **Monorepo** structure managed by **Turborepo** and **UV**, ensuring blazing fast dependency resolution and build times.
-
-| Component | Technology | Description |
-| :--- | :--- | :--- |
-| **Frontend WebApp** | Next.js 15, React 19, MapLibre | High-performance GIS dashboard with WebSocket real-time updates. |
-| **Core API Backend** | FastAPI, Python 3.12, SQLAlchemy | Asynchronous API gateway handling AI orchestration and DB queries. |
-| **Ingestion Service** | Bytewax, Apache Kafka | Distributed stream processing for weather telemetry. |
-| **Geospatial Core** | Rust, PyO3 | Low-level optimization for H3 hexagonal grid aggregations. |
-| **Edge Gateway** | Go (Golang) | Ultra-low latency edge server for proxying IoT weather devices. |
-| **Database Layer** | PostgreSQL, PostGIS, TimescaleDB | Specialized time-series and spatial data storage. |
-
-## 📂 Repository Structure
-
-```text
-geoWeather/
-├── apps/
-│   ├── web/                # Next.js 15 Frontend GIS Dashboard
-│   ├── api/                # FastAPI Backend & AI Orchestrator
-│   └── gateway/            # Go Edge Gateway for device ingestion
-├── services/
-│   ├── ingestion/          # Bytewax / Kafka Streaming Analytics
-│   └── ...
-├── packages/
-│   ├── core-rs/            # Rust compute engine (PyO3)
-│   └── shared-types/       # Shared TypeScript / Python schemas
-├── infra/                  # Docker Compose, PostgreSQL init scripts
-└── README.md               # You are here
+## 📦 Project Structure
+This is a monorepo utilizing TurboRepo for fast local development:
+```
+├── apps
+│   ├── web          # Next.js 16 Frontend
+│   ├── api          # FastAPI Python Backend
+│   └── gateway      # (Optional) Go API Gateway
+├── packages         # Shared code/configs
+├── services         # Python Streaming & Ingestion (Kafka Producers/Consumers)
+├── docker-compose.yml
+└── turbo.json
 ```
 
-## 🛠️ Getting Started
+## ⚙️ Getting Started
 
-### Prerequisites
-- Docker & Docker Compose
-- Node.js >= 20.0
-- Python >= 3.12 & [UV Package Manager](https://github.com/astral-sh/uv)
-- Rust Toolchain (Optional, for core modifications)
+### 1. Prerequisites
+- Docker and Docker Compose (v2.x)
+- Node.js >= 20.x
 
-### 1. Infrastructure Setup
-
-Start the background services (PostgreSQL + PostGIS, Redis, Kafka) using Docker Compose:
-
+### 2. Environment Setup
+Copy the example environment file and fill in your secrets (e.g. Gemini API Key):
 ```bash
-docker-compose up -d
+cp .env.example .env
 ```
+Open `.env` and set `GEMINI_API_KEY` to your actual API key if you plan to use the Gemini features.
 
-### 2. Backend API Initialization
-
-The backend uses `uv` for lightning-fast environment setup.
-
+### 3. Launching the Platform
+Run the entire stack via Docker Compose:
 ```bash
-cd apps/api
-uv sync
-uv run uvicorn main:app --reload --port 8000
+docker-compose up -d --build
 ```
+This will start:
+- 🌐 **Web App**: `http://localhost:3001`
+- ⚙️ **API Server**: `http://localhost:8000`
+- 🗄️ **Databases**: PostgreSQL/PostGIS (5432), TimescaleDB (5433), Redis (6379)
+- 📡 **Streaming**: Kafka (9092), Schema Registry (8081)
 
-### 3. Frontend Web Dashboard
-
-Launch the Next.js application:
-
+### 4. Local Development (Optional)
+If you wish to run the Next.js frontend outside of Docker:
 ```bash
 cd apps/web
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
 
-Visit `http://localhost:3000` to access the interactive map and AI Assistant.
+## 🧠 AI NLP Features
+The chat interface allows querying weather by natural language:
+- **"Thời tiết Hồ Chí Minh chiều nay"** -> The NLP engine (via FlashText loaded with 63 Vietnamese provinces) extracts the location "Hồ Chí Minh", resolves the PostGIS coordinates, and fetches real-time data.
+- **Dropdown Toggle**: Users can switch seamlessly between "Local AI" (Fast, Offline regex/keyword processing) and "Gemini Flash" (Cloud-based, comprehensive answers).
 
-## 🤝 Contributing
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/auster-vn/geoWeather/issues).
+## 📝 CI/CD
+This project uses **GitHub Actions** for continuous integration.
+- Automatically builds the Next.js web application.
+- Tests Python dependencies and environments on every push to `main` and `feature/*` branches.
 
 ## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT License
