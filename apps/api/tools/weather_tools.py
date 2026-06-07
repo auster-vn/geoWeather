@@ -227,6 +227,42 @@ def _wmo_desc(code: int) -> str:
     return "không xác định"
 
 
+# ─── Hourly Forecast ────────────────────────────────────────────────────────────
+async def get_hourly_forecast(city_name: str, target_time: str, db: AsyncSession) -> Dict[str, Any]:
+    """
+    Get the weather forecast for a specific hour of the current day.
+    target_time format: "HH:00" (e.g., "14:00")
+    """
+    city = await _resolve_city(city_name, db)
+    if not city:
+        return {"error": f"City '{city_name}' not found."}
+        
+    data = await _fetch_open_meteo_forecast(city["lat"], city["lon"])
+    hourly = data.get("hourly", {})
+    times = hourly.get("time", [])
+    
+    if not times:
+        return {"error": "No hourly data available from Open-Meteo."}
+        
+    import zoneinfo
+    from datetime import datetime
+    tz = zoneinfo.ZoneInfo("Asia/Bangkok")
+    today_str = datetime.now(tz).strftime("%Y-%m-%d")
+    target_dt = f"{today_str}T{target_time}"
+    
+    try:
+        idx = times.index(target_dt)
+        return {
+            "city_name": city["city_name"],
+            "time": target_dt,
+            "temperature": hourly["temperature_2m"][idx],
+            "precipitation": hourly["precipitation"][idx],
+            "precip_prob_pct": hourly["precipitation_probability"][idx],
+            "condition": _wmo_desc(hourly["weather_code"][idx])
+        }
+    except ValueError:
+        return {"error": "Không tìm thấy dữ liệu dự báo cho khung giờ này."}
+
 # ─── Tool Executor ────────────────────────────────────────────────────────────
 
 async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -> Dict[str, Any]:
@@ -447,6 +483,7 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
         }
 
     # ── get_air_quality_and_uv ────────────────────────────────────────────────
+    # ── get_air_quality_and_uv ────────────────────────────────────────────────
     elif name == "get_air_quality_and_uv":
         city_name = arguments.get("city_name")
         city = await _resolve_city(city_name, db)
@@ -480,7 +517,7 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
             logger.error(f"Air quality fetch failed: {e}")
             return {"error": f"Air quality fetch failed: {e}"}
 
-    # ── get_sun_times ──────────────────────────────────────────────────────────
+    # ── get_sun_times ─────────────────────────────────────────────────────────
     elif name == "get_sun_times":
         city_name   = arguments.get("city_name")
         target_date = arguments.get("target_date")
@@ -525,5 +562,11 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
             "timezone": city.get("timezone", "Asia/Bangkok"),
             "sun_schedule": sun_schedule,
         }
+
+    # ── get_hourly_forecast ───────────────────────────────────────────────────
+    elif name == "get_hourly_forecast":
+        city_name = arguments.get("city_name")
+        target_time = arguments.get("target_time")
+        return await get_hourly_forecast(city_name, target_time, db)
 
     return {"error": f"Unknown tool: {name}"}
