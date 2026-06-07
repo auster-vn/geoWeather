@@ -25,6 +25,7 @@ export function ChatPanel() {
   const [isLoading, setIsLoading] = useState(false)
   const [toolStatus, setToolStatus] = useState('')
   const [isListening, setIsListening] = useState(false)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   
   const { setSelectedLocation } = useWeatherStore()
@@ -181,48 +182,104 @@ export function ChatPanel() {
     sendMessage(userMessage)
   }
 
-  const toggleListening = () => {
-    if (isListening) {
+  const toggleListening = async () => {
+    if (isListening && mediaRecorder) {
+      mediaRecorder.stop()
       setIsListening(false)
       return
     }
 
-    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SpeechRecognition) {
-      alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.")
-      return
-    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      const audioChunks: Blob[] = []
 
-    const recognition = new SpeechRecognition()
-    recognition.lang = 'vi-VN'
-    recognition.continuous = false
-    recognition.interimResults = false
-
-    recognition.onstart = () => {
-      setIsListening(true)
-    }
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript
-      setInput(prev => prev ? `${prev} ${transcript}` : transcript)
-    }
-
-    recognition.onerror = (event: any) => {
-      setIsListening(false)
-      if (event.error === 'network') {
-        alert("Lỗi kết nối dịch vụ nhận diện giọng nói gốc. Điều này thường xảy ra nếu bạn đang dùng trình duyệt Chromium, Brave, hoặc môi trường giả lập không có sẵn API key của Google Speech. Vui lòng mở trang web này trên Google Chrome hoặc Edge để sử dụng.")
-        console.warn("Speech recognition network error: Trình duyệt không hỗ trợ Web Speech API.")
-      } else {
-        console.warn("Speech recognition error:", event.error)
-        alert(`Lỗi nhận diện giọng nói: ${event.error}`)
+      recorder.ondataavailable = (event) => {
+        audioChunks.push(event.data)
       }
-    }
 
-    recognition.onend = () => {
-      setIsListening(false)
-    }
+      recorder.onstop = async () => {
+        setIsLoading(true)
+        setToolStatus('Đang xử lý giọng nói...')
+        try {
+          const webmBlob = new Blob(audioChunks)
+          const arrayBuffer = await webmBlob.arrayBuffer()
+          
+          const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+          const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+          
+          // Encode to WAV
+          let numOfChan = audioBuffer.numberOfChannels,
+              length = audioBuffer.length * numOfChan * 2 + 44,
+              bufferArray = new ArrayBuffer(length),
+              view = new DataView(bufferArray),
+              channels = [], i, sample, offset = 0, pos = 0;
+        
+          const setUint16 = (data: number) => { view.setUint16(pos, data, true); pos += 2; }
+          const setUint32 = (data: number) => { view.setUint32(pos, data, true); pos += 4; }
+        
+          setUint32(0x46464952); // "RIFF"
+          setUint32(length - 8); // file length - 8
+          setUint32(0x45564157); // "WAVE"
+          setUint32(0x20746d66); // "fmt " chunk
+          setUint32(16); // length = 16
+          setUint16(1); // PCM
+          setUint16(numOfChan);
+          setUint32(audioBuffer.sampleRate);
+          setUint32(audioBuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
+          setUint16(numOfChan * 2); // block-align
+          setUint16(16); // 16-bit
+          setUint32(0x61746164); // "data" chunk
+          setUint32(length - pos - 4); // chunk length
+          
+          for (i = 0; i < audioBuffer.numberOfChannels; i++) channels.push(audioBuffer.getChannelData(i));
+          while (pos < length) {
+            for (i = 0; i < numOfChan; i++) {
+              sample = Math.max(-1, Math.min(1, channels[i][offset]));
+              sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
+              view.setInt16(pos, sample, true);
+              pos += 2;
+            }
+            offset++;
+          }
+          
+          const wavBlob = new Blob([bufferArray], { type: "audio/wav" })
+          const formData = new FormData()
+          formData.append('audio', wavBlob, 'voice.wav')
 
-    recognition.start()
+          const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+          const response = await fetch(`${apiHost}/api/v1/chat/transcribe`, {
+            method: 'POST',
+            body: formData,
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            if (data.text) {
+              setInput(prev => prev ? `${prev} ${data.text}` : data.text)
+            } else if (data.error) {
+              alert(data.error)
+            }
+          } else {
+            alert("Lỗi kết nối tới máy chủ.")
+          }
+        } catch (error) {
+          console.error("Transcription error:", error)
+          alert("Lỗi khi xử lý dữ liệu giọng nói.")
+        } finally {
+          setIsLoading(false)
+          setToolStatus('')
+          stream.getTracks().forEach(track => track.stop())
+        }
+      }
+
+      recorder.start()
+      setMediaRecorder(recorder)
+      setIsListening(true)
+    } catch (error) {
+      console.error("Mic access denied", error)
+      alert("Không thể truy cập Micro. Vui lòng kiểm tra quyền của trình duyệt.")
+    }
   }
 
   return (
