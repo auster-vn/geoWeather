@@ -30,6 +30,19 @@ class LocalNLPModel:
             "sun": ["nắng", "nóng", "bình minh", "hoàng hôn", "uv", "mặt trời", "đen da"],
             "forecast": ["dự báo", "ngày mai", "tuần tới", "khi nào", "sắp tới", "tương lai"],
         }
+        self.vn_provinces = [
+            "hà nội", "hồ chí minh", "sài gòn", "đà nẵng", "hải phòng", "cần thơ", 
+            "an giang", "bà rịa", "vũng tàu", "bạc liêu", "bắc giang", "bắc kạn", "bắc ninh",
+            "bến tre", "bình dương", "bình định", "bình phước", "bình thuận", "cà mau",
+            "cao bằng", "đắk lắk", "đắk nông", "điện biên", "đồng nai", "đồng tháp",
+            "gia lai", "hà giang", "hà nam", "hà tĩnh", "hải dương", "hậu giang",
+            "hoà bình", "hưng yên", "khánh hòa", "kiên giang", "kon tum", "lai châu",
+            "lâm đồng", "lạng sơn", "lào cai", "long an", "nam định", "nghệ an",
+            "ninh bình", "ninh thuận", "phú thọ", "phú yên", "quảng bình", "quảng nam",
+            "quảng ngãi", "quảng ninh", "quảng trị", "sóc trăng", "sơn la", "tây ninh",
+            "thái bình", "thái nguyên", "thanh hóa", "thừa thiên huế", "huế",
+            "tiền giang", "trà vinh", "tuyên quang", "vĩnh long", "vĩnh phúc", "yên bái"
+        ]
         
     def classify_intent(self, text_input: str) -> str:
         text_input = text_input.lower()
@@ -57,14 +70,20 @@ class LocalNLPModel:
             logger.warning(f"NER extraction failed: {e}")
             
         # Fallback regex for cities if NER fails
-        match = re.search(r'(tại|ở|thời tiết) ([\w\s]+)', text_input, re.IGNORECASE)
+        match = re.search(r'(tại|ở|thời tiết|cho) ([\w\s]+)', text_input, re.IGNORECASE)
         if match:
             loc = match.group(2).strip()
             # remove some stop words from end
-            for sw in ["hôm nay", "lúc", "bao nhiêu", "thế nào", "có", "không", "?"]:
+            for sw in ["hôm nay", "lúc", "bao nhiêu", "thế nào", "có", "không", "?", "mấy giờ", "giờ"]:
                 loc = loc.replace(sw, "")
             return loc.strip()
             
+        # Hardcoded fallback for 63 provinces and common aliases
+        lower_input = text_input.lower()
+        for prov in self.vn_provinces:
+            if prov in lower_input:
+                return prov
+                
         return None
 
     async def get_city_coords(self, city_name: str, db: AsyncSession) -> Tuple[float, float, str]:
