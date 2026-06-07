@@ -392,13 +392,27 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
 async def run_local_nlp_chat(message: str, db: AsyncSession):
     intent = nlp_service.classify_intent(message)
     location = nlp_service.extract_location(message)
+    target_time = nlp_service.extract_time(message)
     
     response_text = ""
     
     if location:
         lat, lon, city_name = await nlp_service.get_city_coords(location, db)
         if lat and lon:
-            if intent == "rain" or intent == "forecast":
+            if target_time:
+                from ..tools.weather_tools import execute_tool
+                hourly = await execute_tool("get_hourly_forecast", {"city_name": city_name, "target_time": target_time}, db)
+                if "error" in hourly:
+                    response_text = f"Xin lỗi, {hourly['error']}"
+                else:
+                    response_text = (
+                        f"⏰ **Dự báo cho {city_name} lúc {target_time} hôm nay** [MAP:{lat},{lon},10]:\n\n"
+                        f"- 🌡️ Nhiệt độ: {hourly.get('temperature')}°C\n"
+                        f"- 💧 Xác suất mưa: {hourly.get('precip_prob_pct')}%\n"
+                        f"- 🌧️ Lượng mưa: {hourly.get('precipitation')} mm\n"
+                        f"- ☁️ Trạng thái: {hourly.get('condition')}"
+                    )
+            elif intent == "rain" or intent == "forecast":
                 from ..tools.weather_tools import execute_tool
                 forecast = await execute_tool("get_rain_forecast", {"city_name": city_name}, db)
                 if "error" in forecast:

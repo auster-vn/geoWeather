@@ -52,6 +52,22 @@ class LocalNLPModel:
                     return intent
         return "current_weather" # Default intent
         
+    def extract_time(self, text_input: str) -> str:
+        # Match pattern: <number> [giờ|h] [sáng|trưa|chiều|tối|đêm]
+        match = re.search(r'(\d{1,2})\s*(?:giờ|h)(?:\s*(sáng|trưa|chiều|tối|đêm))?', text_input, re.IGNORECASE)
+        if match:
+            hour = int(match.group(1))
+            meridiem = match.group(2)
+            
+            if meridiem:
+                meridiem = meridiem.lower()
+                if meridiem in ["chiều", "tối", "đêm"] and hour < 12:
+                    hour += 12
+            
+            if 0 <= hour <= 23:
+                return f"{hour:02d}:00"
+        return None
+        
     def extract_location(self, text_input: str) -> str:
         try:
             tokens = ner(text_input)
