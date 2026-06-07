@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useWeatherStore } from '../../store/weather'
-import { Send, Sparkles, Loader2, Database, MapPin } from 'lucide-react'
+import { Send, Sparkles, Loader2, Database, MapPin, Mic } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChatWeatherChart } from './ChatWeatherChart'
@@ -24,6 +24,7 @@ export function ChatPanel() {
   ])
   const [isLoading, setIsLoading] = useState(false)
   const [toolStatus, setToolStatus] = useState('')
+  const [isListening, setIsListening] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   
   const { setSelectedLocation } = useWeatherStore()
@@ -180,6 +181,44 @@ export function ChatPanel() {
     sendMessage(userMessage)
   }
 
+  const toggleListening = () => {
+    if (isListening) {
+      setIsListening(false)
+      return
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói.")
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'vi-VN'
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onstart = () => {
+      setIsListening(true)
+    }
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      setInput(prev => prev ? `${prev} ${transcript}` : transcript)
+    }
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error", event.error)
+      setIsListening(false)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognition.start()
+  }
+
   return (
     <div className="chat-container">
       {/* Header */}
@@ -253,6 +292,30 @@ export function ChatPanel() {
           >
             <MapPin className="w-4 h-4" />
           </button>
+          
+          <button
+            type="button"
+            onClick={toggleListening}
+            disabled={isLoading}
+            className={`chat-btn-mic ${isListening ? 'listening' : ''}`}
+            title="Hỏi bằng giọng nói"
+            style={{ 
+              background: isListening ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.1)', 
+              border: `1px solid ${isListening ? 'rgba(239, 68, 68, 0.5)' : 'rgba(255,255,255,0.2)'}`, 
+              borderRadius: '8px',
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: isListening ? '#ef4444' : 'var(--text-primary)',
+              marginRight: '6px',
+              transition: 'all 0.3s'
+            }}
+          >
+            <Mic className={`w-4 h-4 ${isListening ? 'animate-pulse' : ''}`} />
+          </button>
+
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
