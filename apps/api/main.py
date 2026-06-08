@@ -8,7 +8,11 @@ from fastapi.middleware.gzip import GZipMiddleware
 from apps.api.core.database import init_db, close_db
 from apps.api.core.redis import init_redis, close_redis, get_redis
 from apps.api.core.telemetry import setup_telemetry
+from apps.api.core.rate_limit import limiter
 from apps.api.routers import weather, locations, tiles, websocket, chat
+
+from slowapi.errors import RateLimitExceeded
+from slowapi import _rate_limit_exceeded_handler
 
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
@@ -63,6 +67,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Health Check endpoints
 @app.get("/health")

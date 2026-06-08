@@ -13,6 +13,7 @@ from ..core.config import settings
 from ..core.database import get_db
 from ..tools.weather_tools import weather_tool_definitions, execute_tool
 from ..services.ai_nlp import nlp_service
+from ..core.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -391,13 +392,27 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
 
 async def run_local_nlp_chat(message: str, db: AsyncSession):
     intent = nlp_service.classify_intent(message)
-    location = await nlp_service.extract_location(message, db)
     target_time = nlp_service.extract_time(message)
     
     response_text = ""
     
+    # Check for exact coordinates in message (e.g. from Get Location button)
+    import re
+    coord_match = re.search(r"lat:\s*(-?\d+\.?\d*),\s*lon:\s*(-?\d+\.?\d*)", message)
+    
+    if coord_match:
+        lat = float(coord_match.group(1))
+        lon = float(coord_match.group(2))
+        city_name = "Vị trí của bạn"
+        location = "vị trí của tôi"
+    else:
+        location = await nlp_service.extract_location(message, db)
+        if location:
+            lat, lon, city_name = await nlp_service.get_city_coords(location, db)
+        else:
+            lat, lon, city_name = None, None, None
+    
     if location:
-        lat, lon, city_name = await nlp_service.get_city_coords(location, db)
         if lat and lon:
             if target_time:
                 from ..tools.weather_tools import execute_tool
@@ -468,7 +483,9 @@ async def run_local_nlp_chat(message: str, db: AsyncSession):
     yield "data: [DONE]\n\n"
 
 @router.get("/stream")
+@limiter.limit("5/minute")
 async def chat_stream(
+    request: Request,
     message: str = Query(..., min_length=1),
     history_json: str = Query("[]"),
     model: str = Query("local"),
@@ -485,20 +502,26 @@ async def transcribe_audio(audio: UploadFile = File(...)):
     try:
         audio_bytes = await audio.read()
         
-        # Write bytes to temporary WAV file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            tmp.write(audio_bytes)
-            tmp_path = tmp.name
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        
+        result = await client.aio.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[
+                types.Part.from_bytes(
+                    data=audio_bytes,
+                    mime_type='audio/wav',
+                ),
+                "Transcribe this Vietnamese speech to text accurately. Output only the transcription, without any markdown formatting, quotes, or conversational filler."
+            ]
+        )
+        
+        text = result.text.strip()
+        if not text:
+            return {"error": "Không thể nhận diện giọng nói. Bạn có thể nói lại rõ hơn không?"}
             
-        r = sr.Recognizer()
-        with sr.AudioFile(tmp_path) as source:
-            audio_data = r.record(source)
-            text = r.recognize_google(audio_data, language="vi-VN")
-            
-        os.remove(tmp_path)
         return {"text": text}
-    except sr.UnknownValueError:
-        return {"error": "Không thể nhận diện giọng nói. Bạn có thể nói lại rõ hơn không?"}
     except Exception as e:
         logger.error(f"STT Error: {e}")
         return {"error": str(e)}

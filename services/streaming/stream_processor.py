@@ -12,6 +12,7 @@ from confluent_kafka.schema_registry.avro import AvroDeserializer, AvroSerialize
 from confluent_kafka.serialization import SerializationContext, MessageField
 import redis.asyncio as aioredis
 import asyncpg
+from pydantic import BaseModel, Field, ValidationError
 try:
     import geoweather_core
 except ImportError:
@@ -39,6 +40,14 @@ def get_asyncpg_dsn(url: str) -> str:
     if "postgresql+asyncpg://" in url:
         return url.replace("postgresql+asyncpg://", "postgresql://")
     return url
+
+class WeatherObservationValidator(BaseModel):
+    temperature: float = Field(..., ge=-60, le=60)
+    humidity: int = Field(..., ge=0, le=100)
+    wind_speed: float = Field(..., ge=0, le=300)
+    precipitation: float = Field(..., ge=0)
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
 
 class WeatherStreamProcessor:
     def __init__(self):
@@ -140,6 +149,20 @@ class WeatherStreamProcessor:
         lon = record["longitude"]
         loc_id = record["location_id"]
         temp = record["temperature"]
+
+        # 0. Data Quality / Anomaly Validation
+        try:
+            WeatherObservationValidator(
+                temperature=temp,
+                humidity=record["humidity"],
+                wind_speed=record["wind_speed"],
+                precipitation=record["precipitation"],
+                latitude=lat,
+                longitude=lon
+            )
+        except ValidationError as e:
+            logger.warning(f"Data Quality Error for location {loc_id}: {e}. Skipping anomalous record.")
+            return
 
         # Parse observed_at datetime / timestamp
         raw_observed = record["observed_at"]

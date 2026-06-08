@@ -57,9 +57,38 @@ export function WeatherMap() {
     }
     
     fetchPoints()
-    // Poll updates every 30 seconds
-    const interval = setInterval(fetchPoints, 30000)
-    return () => clearInterval(interval)
+
+    // WebSocket real-time updates
+    const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const wsUrl = apiHost.replace(/^http/, 'ws') + '/ws/weather/global'
+    
+    let ws: WebSocket | null = null;
+    const connectWs = () => {
+      ws = new WebSocket(wsUrl)
+      ws.onmessage = (event) => {
+        try {
+          const update = JSON.parse(event.data)
+          // Stream processor sends hourly aggregates by H3 cell, 
+          // but let's update any matching point's temperature/weather
+          setWeatherPoints(prev => {
+            return prev.map(p => {
+              if (p.h3_index_r4 === update.h3_index_r4) {
+                return { ...p, temperature: update.avg_temperature, wind_speed: update.max_wind_speed, precipitation: update.total_precip }
+              }
+              return p
+            })
+          })
+        } catch (e) {
+          console.error("WS Parse error", e)
+        }
+      }
+      ws.onclose = () => setTimeout(connectWs, 5000)
+    }
+    connectWs()
+
+    return () => {
+      if (ws) ws.close()
+    }
   }, [])
 
   // Initialize MapLibre GL

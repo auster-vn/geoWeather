@@ -65,7 +65,7 @@ async def weather_stream(websocket: WebSocket, h3_index: str):
     except Exception as e:
         logger.warning(f"Error resolving parent cells for {h3_index}: {e}")
 
-    all_cells = [h3_index] + parent_cells
+    all_cells = [h3_index, "global"] + parent_cells
     await manager.subscribe(websocket, all_cells)
     logger.info(f"WebSocket client connected to H3: {h3_index} (listening on cells: {all_cells})")
 
@@ -107,6 +107,7 @@ async def redis_listener():
                         h3_cell = channel_parts[-1]
                         data = json.loads(message["data"])
                         await manager.broadcast_update(h3_cell, data)
+                        await manager.broadcast_update("global", data)
                     except Exception as e:
                         logger.error(f"Error broadcasting WebSocket message: {e}")
                 # Yield control to the event loop between polls
