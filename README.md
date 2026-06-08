@@ -29,6 +29,10 @@
   </p>
 </div>
 
+<div align="center">
+  <img src="images/screenshot.png" alt="GeoWeather Screenshot" width="800">
+</div>
+
 <!-- TABLE OF CONTENTS -->
 <details>
   <summary>Mục Lục</summary>
