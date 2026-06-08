@@ -158,6 +158,21 @@ def weather_tool_definitions() -> List[Dict[str, Any]]:
                 },
                 "required": ["city_name"]
             }
+        },
+        {
+            "name": "get_safe_route",
+            "description": (
+                "Finds the safest driving route between two locations avoiding heavy rain and bad weather. "
+                "Use this when the user asks for directions, routing, or safe routes."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "origin": {"type": "string", "description": "Starting location name (e.g., 'Dĩ An')."},
+                    "destination": {"type": "string", "description": "Destination location name (e.g., 'Quận 1')."}
+                },
+                "required": ["origin", "destination"]
+            }
         }
     ]
 
@@ -599,5 +614,53 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
         city_name = arguments.get("city_name")
         target_time = arguments.get("target_time")
         return await get_hourly_forecast(city_name, target_time, db)
+
+    # ── get_safe_route ────────────────────────────────────────────────────────
+    elif name == "get_safe_route":
+        origin = arguments.get("origin")
+        dest = arguments.get("destination")
+        
+        async def geocode_loc(loc_name: str):
+            url = "https://nominatim.openstreetmap.org/search"
+            # Try with Ho Chi Minh suffix first for better local results
+            params = {"q": f"{loc_name}, Ho Chi Minh", "format": "json", "limit": 1}
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, params=params, headers={"User-Agent": "GeoWeather/1.0"})
+                if resp.status_code == 200 and resp.json():
+                    return float(resp.json()[0]["lat"]), float(resp.json()[0]["lon"])
+            # Fallback to exact search
+            params = {"q": loc_name, "format": "json", "limit": 1}
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, params=params, headers={"User-Agent": "GeoWeather/1.0"})
+                if resp.status_code == 200 and resp.json():
+                    return float(resp.json()[0]["lat"]), float(resp.json()[0]["lon"])
+            return None
+            
+        ocoords = await geocode_loc(origin)
+        dcoords = await geocode_loc(dest)
+        
+        if not ocoords or not dcoords:
+            return {"error": f"Không thể lấy tọa độ cho {origin} hoặc {dest}"}
+            
+        olat, olon = ocoords
+        dlat, dlon = dcoords
+        
+        from apps.api.routers.routing import safe_route
+        try:
+            route_resp = await safe_route(olat, olon, dlat, dlon, db)
+            best_route = route_resp["best_route"]
+            return {
+                "origin": origin,
+                "destination": dest,
+                "origin_coords": ocoords,
+                "dest_coords": dcoords,
+                "duration_minutes": round(best_route["duration_normal"] / 60),
+                "distance_km": round(best_route["distance"] / 1000, 1),
+                "max_precipitation_mm": best_route["max_precip"],
+                "weather_penalty_minutes": round(best_route["penalty"] / 60),
+                "route_command_tag": f"[ROUTE:{olat},{olon},{dlat},{dlon}]"
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
     return {"error": f"Unknown tool: {name}"}

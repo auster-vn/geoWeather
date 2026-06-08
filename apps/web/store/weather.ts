@@ -21,6 +21,10 @@ interface WeatherState {
     pitch: number
   }
   setMapViewport: (viewport: { latitude: number; longitude: number; zoom: number; pitch: number }) => void
+
+  activeRoute: any | null
+  setActiveRoute: (route: any | null) => void
+  fetchSafeRoute: (olat: number, olon: number, dlat: number, dlon: number) => Promise<void>
 }
 
 export const useWeatherStore = create<WeatherState>((set) => ({
@@ -36,5 +40,20 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     zoom: 2.0,
     pitch: 0
   },
-  setMapViewport: (viewport) => set({ mapViewport: viewport })
+  setMapViewport: (viewport) => set({ mapViewport: viewport }),
+
+  activeRoute: null,
+  setActiveRoute: (route) => set({ activeRoute: route }),
+  fetchSafeRoute: async (olat, olon, dlat, dlon) => {
+    try {
+      const url = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+      const res = await fetch(`${url}/api/v1/routing/safe-route?olat=${olat}&olon=${olon}&dlat=${dlat}&dlon=${dlon}`)
+      const data = await res.json()
+      if (data.status === "success" && data.best_route) {
+        set({ activeRoute: data.best_route })
+      }
+    } catch (e) {
+      console.error("Failed to fetch safe route", e)
+    }
+  }
 }))

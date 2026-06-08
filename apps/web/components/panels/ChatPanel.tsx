@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useWeatherStore } from '../../store/weather'
-import { Send, Sparkles, Loader2, Database, MapPin, Mic, ChevronDown, Check } from 'lucide-react'
+import { Send, Sparkles, Loader2, Database, MapPin, Mic, ChevronDown, Check, Volume2, VolumeX } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChatWeatherChart } from './ChatWeatherChart'
@@ -27,6 +27,9 @@ export function ChatPanel() {
   const [isListening, setIsListening] = useState(false)
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [selectedModel, setSelectedModel] = useState<'local' | 'gemini'>('local')
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
+  const setSelectedLocation = useWeatherStore((state) => state.setSelectedLocation)
+  const fetchSafeRoute = useWeatherStore((state) => state.fetchSafeRoute)
   const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const modelSelectorRef = useRef<HTMLDivElement>(null)
@@ -42,8 +45,60 @@ export function ChatPanel() {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])
+
+  // Stop speaking when component unmounts
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
+
+  const speakText = (text: string, index: number) => {
+    if (!window.speechSynthesis) {
+      alert("Trình duyệt của bạn không hỗ trợ đọc giọng nói.")
+      return
+    }
+
+    if (speakingIndex === index) {
+      // Toggle stop
+      window.speechSynthesis.cancel()
+      setSpeakingIndex(null)
+      return
+    }
+
+    // Stop currently speaking
+    window.speechSynthesis.cancel()
+
+    // Strip markdown formatting for cleaner speech
+    const cleanText = text
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/\[MAP:.*?\]/g, '')
+      .replace(/\[ROUTE:.*?\]/g, '')
+      .replace(/#/g, '')
+      .replace(/`/g, '')
+      .replace(/_FETCHED_ROUTE/g, '')
+
+    const utterance = new SpeechSynthesisUtterance(cleanText)
+    utterance.lang = 'vi-VN'
+    utterance.rate = 1.0
+    utterance.pitch = 1.0
+
+    utterance.onend = () => {
+      setSpeakingIndex(null)
+    }
+    
+    utterance.onerror = () => {
+      setSpeakingIndex(null)
+    }
+
+    setSpeakingIndex(index)
+    window.speechSynthesis.speak(utterance)
+  }
   
-  const { setSelectedLocation } = useWeatherStore()
+
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -128,13 +183,27 @@ export function ChatPanel() {
               })
             }
 
+            // Check if there is a ROUTE tag in the text stream, e.g. [ROUTE:olat,olon,dlat,dlon]
+            const routeMatch = fullContent.match(/\[ROUTE:(-?\d+\.?\d*),(-?\d+\.?\d*),(-?\d+\.?\d*),(-?\d+\.?\d*)\]/)
+            if (routeMatch && !fullContent.includes('_FETCHED_ROUTE')) {
+              const olat = parseFloat(routeMatch[1])
+              const olon = parseFloat(routeMatch[2])
+              const dlat = parseFloat(routeMatch[3])
+              const dlon = parseFloat(routeMatch[4])
+              
+              // Only call it once per stream
+              fullContent += '_FETCHED_ROUTE' 
+              
+              fetchSafeRoute(olat, olon, dlat, dlon)
+            }
+
             // Update the last message content
             setMessages(prev => {
               const next = [...prev]
               if (next.length > 0) {
                 next[next.length - 1] = {
                   role: 'assistant',
-                  content: fullContent.replace(/\[MAP:.*\]/g, '') // strip map tag from UI
+                  content: fullContent.replace(/\[MAP:.*\]/g, '').replace(/\[ROUTE:.*\]/g, '').replace(/_FETCHED_ROUTE/g, '') // strip map/route tags from UI
                 }
               }
               return next
@@ -394,6 +463,27 @@ export function ChatPanel() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0', color: 'var(--text-secondary)' }}>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>{toolStatus || 'Đang suy nghĩ...'}</span>
+                </div>
+              )}
+
+              {/* TTS Button */}
+              {m.role === 'assistant' && m.content && (
+                <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button 
+                    onClick={() => speakText(m.content, idx)}
+                    style={{ 
+                      background: 'rgba(255,255,255,0.1)', 
+                      border: 'none', 
+                      borderRadius: '50%', 
+                      padding: '6px', 
+                      cursor: 'pointer',
+                      color: speakingIndex === idx ? '#3b82f6' : 'var(--text-secondary)',
+                      transition: 'all 0.2s'
+                    }}
+                    title={speakingIndex === idx ? "Dừng phát âm" : "Phát âm"}
+                  >
+                    {speakingIndex === idx ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               )}
             </div>

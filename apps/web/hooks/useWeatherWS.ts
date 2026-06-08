@@ -49,13 +49,13 @@ export function useWeatherWS(h3Index: string | null) {
             const update = JSON.parse(event.data)
             setData(update)
           } catch (e) {
-            console.error("Failed to parse websocket update:", e)
+            console.warn("Failed to parse websocket update:", e)
           }
         }
 
         ws.onerror = (e) => {
           setError("WebSocket connection error occurred")
-          console.error("WebSocket error:", e)
+          console.warn("WebSocket error:", e)
         }
 
         ws.onclose = () => {

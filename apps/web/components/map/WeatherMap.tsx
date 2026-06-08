@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapboxOverlay } from '@deck.gl/mapbox'
-import { ScatterplotLayer } from '@deck.gl/layers'
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers'
 import { HeatmapLayer, HexagonLayer } from '@deck.gl/aggregation-layers'
 import { useWeatherStore } from '../../store/weather'
 import { Activity, Thermometer, Wind } from 'lucide-react'
@@ -36,7 +36,7 @@ export function WeatherMap() {
   const [loading, setLoading] = useState(true)
   const [errorLog, setErrorLog] = useState<string | null>(null)
 
-  const { activeLayer, selectedLocation, setSelectedLocation, mapViewport, setMapViewport } = useWeatherStore()
+  const { activeLayer, selectedLocation, setSelectedLocation, mapViewport, setMapViewport, activeRoute } = useWeatherStore()
 
   // Fetch weather points from FastAPI
   useEffect(() => {
@@ -159,6 +159,22 @@ export function WeatherMap() {
     }
   }, [selectedLocation])
 
+  // Fly to activeRoute when it is generated
+  useEffect(() => {
+    if (activeRoute && mapRef.current) {
+      const coords = activeRoute.geometry?.coordinates;
+      if (coords && coords.length > 0) {
+        const midPoint = coords[Math.floor(coords.length / 2)];
+        mapRef.current.flyTo({
+          center: [midPoint[0], midPoint[1]],
+          zoom: 12,
+          essential: true,
+          duration: 2000
+        })
+      }
+    }
+  }, [activeRoute])
+
   // Setup Deck.gl Layers overlay
   useEffect(() => {
     const map = mapRef.current
@@ -229,6 +245,21 @@ export function WeatherMap() {
       )
     }
 
+    if (activeRoute) {
+      layers.push(
+        new GeoJsonLayer({
+          id: 'safe-route-layer',
+          data: activeRoute.geometry,
+          stroked: true,
+          filled: false,
+          lineWidthMinPixels: 5,
+          getLineColor: [0, 255, 128, 255], // Bright Neon Green
+          getLineWidth: 6,
+          opacity: 0.8
+        })
+      )
+    }
+
     if (!overlayRef.current) {
       const overlay = new MapboxOverlay({ layers })
       map.addControl(overlay)
@@ -236,7 +267,7 @@ export function WeatherMap() {
     } else {
       overlayRef.current.setProps({ layers })
     }
-  }, [weatherPoints, activeLayer])
+  }, [weatherPoints, activeLayer, activeRoute])
 
   return (
     <div className="relative" style={{ width: '100%', height: '100%' }}>
@@ -250,7 +281,7 @@ export function WeatherMap() {
       )}
       
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm z-50">
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm z-10">
           <div className="flex flex-col items-center gap-3 text-emerald-400 font-medium">
             <Activity className="animate-spin w-8 h-8" />
             <span>Nạp bản đồ GIS thời tiết...</span>

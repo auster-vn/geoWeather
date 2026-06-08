@@ -9,7 +9,7 @@ from apps.api.core.database import init_db, close_db
 from apps.api.core.redis import init_redis, close_redis, get_redis
 from apps.api.core.telemetry import setup_telemetry
 from apps.api.core.rate_limit import limiter
-from apps.api.routers import weather, locations, tiles, websocket, chat
+from apps.api.routers import weather, locations, tiles, websocket, chat, routing
 
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
@@ -85,6 +85,7 @@ app.include_router(weather.router, prefix="/api/v1/weather", tags=["weather"])
 app.include_router(locations.router, prefix="/api/v1/locations", tags=["locations"])
 app.include_router(tiles.router, prefix="/tiles", tags=["tiles"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
+app.include_router(routing.router, prefix="/api/v1/routing", tags=["routing"])
 app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
 
 # Setup Prometheus metrics

@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react'
 import { WeatherMap } from '../components/map/WeatherMap'
 import { ChatPanel } from '../components/panels/ChatPanel'
 import { WeatherDetail } from '../components/panels/WeatherDetail'
+import { RoutingPanel } from '../components/panels/RoutingPanel'
 import { useWeatherStore, ActiveLayerType } from '../store/weather'
-import { Thermometer, Flame, Hexagon, Globe, RefreshCw } from 'lucide-react'
+import { Thermometer, Flame, Hexagon, Globe, RefreshCw, MessageCircle, X } from 'lucide-react'
 
 export default function Home() {
   const { activeLayer, setActiveLayer } = useWeatherStore()
   const [isSyncing, setIsSyncing] = useState(false)
   const [networkError, setNetworkError] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(false)
 
   const layerOptions = [
     { id: 'scatterplot' as ActiveLayerType, label: 'Điểm trạm', icon: Thermometer },
@@ -104,6 +106,11 @@ export default function Home() {
           )}
         </div>
 
+        {/* Routing UI Panel */}
+        <div className="routing-container" style={{ position: 'absolute', top: '100px', left: '20px', zIndex: 10 }}>
+          <RoutingPanel />
+        </div>
+
         {/* Selected City Details Panel */}
         <WeatherDetail />
 
@@ -126,10 +133,34 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Mobile Backdrop for Chat */}
+      <div 
+        className={`mobile-backdrop ${!isChatOpen ? 'hidden' : ''}`} 
+        onClick={() => setIsChatOpen(false)}
+      />
+
       {/* Floating Chat Sidebar (Right side) */}
-      <div className="sidebar-right">
+      <div className={`sidebar-right ${!isChatOpen ? 'closed' : ''}`}>
+        {/* Grab Handle for bottom sheet */}
+        <div className="bottom-sheet-handle md:hidden" />
+        
+        {/* Mobile close button inside chat */}
+        <button 
+          className="md:hidden flex items-center justify-center rounded-full" 
+          style={{ position: 'absolute', top: '12px', right: '16px', width: '32px', height: '32px', background: 'var(--bg-panel)', color: 'var(--text-primary)', zIndex: 10, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}
+          onClick={() => setIsChatOpen(false)}
+        >
+          <X className="w-5 h-5" />
+        </button>
         <ChatPanel />
       </div>
+
+      {/* Mobile FAB to open chat */}
+      {!isChatOpen && (
+        <button className="mobile-chat-fab" onClick={() => setIsChatOpen(true)}>
+          <MessageCircle className="w-6 h-6" />
+        </button>
+      )}
     </div>
   )
 }
