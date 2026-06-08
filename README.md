@@ -170,7 +170,7 @@ Phân phối dưới giấy phép MIT. Xem file `LICENSE.txt` để biết thêm
 <!-- CONTACT -->
 ## Contact
 
-Auster VN - [@auster_vn](https://twitter.com/auster_vn) - contact@example.com
+Auster VN - [@auster_vn](https://auster-vn.github.io/#contact) 
 
 Project Link: [https://github.com/auster-vn/geoWeather](https://github.com/auster-vn/geoWeather)
 
