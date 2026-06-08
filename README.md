@@ -1,76 +1,60 @@
-# 🌍 GeoWeather Intelligence Platform
+# GeoWeather
 
-**GeoWeather** is an End-to-End Real-Time GIS & Weather Analytics System. It visualizes live weather data on an interactive WebGL map, supports real-time streaming, and features a dual AI-powered conversational assistant (Local NLP & Google Gemini) for advanced natural language location queries.
+## Ý Tưởng (Idea)
+GeoWeather là một hệ thống bản đồ thời tiết thời gian thực được xây dựng với mục tiêu cung cấp dữ liệu thời tiết chính xác dựa trên lưới không gian lục giác H3 của Uber. Thay vì chỉ hiển thị thời tiết theo tên thành phố tĩnh, hệ thống thu thập và phân tích dữ liệu ở cấp độ không gian - thời gian, hỗ trợ truy vấn NLP thông minh thông qua trí tuệ nhân tạo.
 
-## 🚀 Features
-- **Real-Time Map Visualization**: Next.js 16 WebGL interactive map using MapLibre GL JS and Deck.gl.
-- **Dual AI Assistant**: Toggle between **Gemini 2.5 Flash** for comprehensive answers and a **Local NLP Model (FlashText/Underthesea)** for ultra-fast, offline natural language location resolution.
-- **GIS Backend**: PostgreSQL with PostGIS for spatial data storage (over 53k+ administrative boundaries).
-- **Time-Series Data**: TimescaleDB for continuous ingestion of weather metrics.
-- **Streaming Pipeline**: Apache Kafka + Schema Registry + Python processor for real-time data ingestion.
-- **Modern Infrastructure**: Fully containerized with Docker, automated via CI/CD (GitHub Actions).
+## Công Dụng (Use Cases)
+- **Theo dõi thời tiết thời gian thực:** Cập nhật liên tục trạng thái thời tiết, nhiệt độ, lượng mưa, tốc độ gió trên bản đồ.
+- **Phân tích không gian:** Phân mảnh bản đồ thành lưới H3 đa độ phân giải, giúp phân tích xu hướng thời tiết theo vùng một cách chính xác.
+- **Trợ lý AI (GeoWeather Assistant):** Tích hợp công cụ tương tác bằng giọng nói và văn bản tự nhiên, tự động xử lý ý định (intent) và trả về thông tin thời tiết kèm theo bản đồ vị trí trực quan.
+- **Giám sát hệ thống (Observability):** Thu thập các số liệu vận hành và hiệu suất hệ thống thời gian thực với Prometheus và Grafana.
 
-## 🛠️ Tech Stack
-- **Frontend**: Next.js 16 (React 19), MapLibre GL, Deck.gl, Tailwind CSS.
-- **Backend API**: Python 3.11, FastAPI, SQLAlchemy, Underthesea (NLP), FlashText, Google GenAI SDK.
-- **Data Engineering**: Apache Kafka, Confluent Schema Registry, Redis.
-- **Databases**: PostgreSQL (PostGIS), TimescaleDB.
-- **Deployment**: Docker, Docker Compose, GitHub Actions.
+## Công Nghệ (Technology Stack)
+- **Frontend:** Next.js (React), Mapbox GL JS, WebSockets.
+- **Backend API:** FastAPI (Python), SQLAlchemy, H3, Uvicorn, SlowAPI.
+- **AI & NLP:** Google Gemini 1.5/2.5 Flash, NLTK, spaCy, Speech-to-Text.
+- **Gateway & Load Balancing:** Go (Golang) Reverse Proxy.
+- **Database & Ingestion:** PostgreSQL (PostGIS & TimescaleDB), Redis.
+- **Infrastructure & Monitoring:** Docker Compose, Prometheus, Grafana.
 
-## 📦 Project Structure
-This is a monorepo utilizing TurboRepo for fast local development:
+## Kiến Trúc Hệ Thống (Architecture)
+Hệ thống được thiết kế theo kiến trúc Microservices hướng sự kiện (Event-Driven):
+1. **Data Ingestion Service:** Các background workers (producer) liên tục lấy dữ liệu từ Open-Meteo và đẩy vào TimescaleDB/PostGIS.
+2. **Streaming Processor:** Lắng nghe thay đổi dữ liệu, tính toán các aggregate metric trên lưới H3 và phát sóng qua Redis Pub/Sub.
+3. **API Layer:** FastAPI xử lý các truy vấn từ client, thực hiện Cache với Redis, Rate Limiting, và duy trì các kết nối WebSockets để đẩy dữ liệu thời gian thực cho UI.
+4. **AI/NLP Layer:** Xử lý ngôn ngữ tự nhiên từ người dùng (Text/Audio), tích hợp Function Calling với Gemini để tra cứu CSDL hoặc gọi external API.
+5. **Gateway Layer:** Được viết bằng Go, đóng vai trò nhận toàn bộ traffic, xử lý SSL, phân luồng requests (chia tải) về các service thích hợp.
+
+## Cài Đặt & Cấu Hình (Configuration)
+
+### 1. Yêu Cầu Hệ Thống
+- Docker và Docker Compose (phiên bản mới nhất)
+- Node.js >= 18 (nếu muốn chạy Web tĩnh độc lập)
+- Các API Keys cần thiết: Mapbox Token, Gemini API Key.
+
+### 2. Thiết lập Biến Môi Trường
+Tạo file `.env` ở thư mục gốc của dự án với các cấu hình cơ bản sau:
+```env
+# Database
+POSTGRES_USER=geo_user
+POSTGRES_PASSWORD=your_password
+POSTGRES_DB=geo_weather
+
+# API Keys
+GEMINI_API_KEY=your_gemini_api_key
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
-├── apps
-│   ├── web          # Next.js 16 Frontend
-│   ├── api          # FastAPI Python Backend
-│   └── gateway      # (Optional) Go API Gateway
-├── packages         # Shared code/configs
-├── services         # Python Streaming & Ingestion (Kafka Producers/Consumers)
-├── docker-compose.yml
-└── turbo.json
-```
 
-## ⚙️ Getting Started
-
-### 1. Prerequisites
-- Docker and Docker Compose (v2.x)
-- Node.js >= 20.x
-
-### 2. Environment Setup
-Copy the example environment file and fill in your secrets (e.g. Gemini API Key):
-```bash
-cp .env.example .env
-```
-Open `.env` and set `GEMINI_API_KEY` to your actual API key if you plan to use the Gemini features.
-
-### 3. Launching the Platform
-Run the entire stack via Docker Compose:
+### 3. Khởi Động Hệ Thống
+Dự án được đóng gói toàn bộ qua Docker Compose. Để khởi chạy:
 ```bash
 docker-compose up -d --build
 ```
-This will start:
-- 🌐 **Web App**: `http://localhost:3001`
-- ⚙️ **API Server**: `http://localhost:8000`
-- 🗄️ **Databases**: PostgreSQL/PostGIS (5432), TimescaleDB (5433), Redis (6379)
-- 📡 **Streaming**: Kafka (9092), Schema Registry (8081)
 
-### 4. Local Development (Optional)
-If you wish to run the Next.js frontend outside of Docker:
-```bash
-cd apps/web
-npm install --legacy-peer-deps
-npm run dev
-```
-
-## 🧠 AI NLP Features
-The chat interface allows querying weather by natural language:
-- **"Thời tiết Hồ Chí Minh chiều nay"** -> The NLP engine (via FlashText loaded with 63 Vietnamese provinces) extracts the location "Hồ Chí Minh", resolves the PostGIS coordinates, and fetches real-time data.
-- **Dropdown Toggle**: Users can switch seamlessly between "Local AI" (Fast, Offline regex/keyword processing) and "Gemini Flash" (Cloud-based, comprehensive answers).
-
-## 📝 CI/CD
-This project uses **GitHub Actions** for continuous integration.
-- Automatically builds the Next.js web application.
-- Tests Python dependencies and environments on every push to `main` and `feature/*` branches.
-
-## 📄 License
-MIT License
+### 4. Các Dịch Vụ Sẵn Sàng
+Sau khi hệ thống khởi động hoàn tất, bạn có thể truy cập các dịch vụ tại:
+- **Frontend Web UI:** http://localhost:3001
+- **Backend API (Swagger Docs):** http://localhost:8000/docs
+- **Grafana Dashboard:** http://localhost:3002 (Mặc định: admin/admin)
+- **Prometheus Metrics:** http://localhost:9090

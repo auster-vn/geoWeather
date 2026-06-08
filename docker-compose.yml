@@ -187,6 +187,28 @@ services:
     depends_on:
       - api
 
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./infra/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   timescale_data:

@@ -63,7 +63,13 @@ async def get_nearest_weather(lat: float, lon: float, db: AsyncSession = Depends
         if not row:
             raise HTTPException(status_code=404, detail="No nearby cities found.")
             
-        return dict(row)
+        data = dict(row)
+        if not data.get("h3_r4"):
+            import h3
+            data["h3_r4"] = h3.latlng_to_cell(lat, lon, 4)
+            data["h3_r7"] = h3.latlng_to_cell(lat, lon, 7)
+            
+        return data
     except Exception as e:
         logger.error(f"Error in get_nearest_weather: {e}")
         raise HTTPException(status_code=500, detail="Database query failed.")
@@ -161,6 +167,7 @@ async def get_region_weather_stats(h3_index: str, ts_db: AsyncSession = Depends(
         raise HTTPException(status_code=500, detail="TimescaleDB query failed.")
 
 @router.get("/all")
+@cache(expire=15)
 async def get_all_weather(db: AsyncSession = Depends(get_db)):
     """
     Returns current weather parameters for all cities.
@@ -186,7 +193,18 @@ async def get_all_weather(db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(query)
         rows = result.mappings().all()
-        return [dict(r) for r in rows]
+        
+        # Calculate h3 indexes if missing
+        import h3
+        processed_rows = []
+        for r in rows:
+            data = dict(r)
+            if not data.get("h3_r4"):
+                data["h3_r4"] = h3.latlng_to_cell(data["latitude"], data["longitude"], 4)
+                data["h3_r7"] = h3.latlng_to_cell(data["latitude"], data["longitude"], 7)
+            processed_rows.append(data)
+            
+        return processed_rows
     except Exception as e:
         logger.error(f"Error in get_all_weather: {e}")
         raise HTTPException(status_code=500, detail="Database query failed.")

@@ -223,12 +223,13 @@ export function ChatPanel() {
           const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
           const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
           
-          // Encode to WAV
-          let numOfChan = audioBuffer.numberOfChannels,
-              length = audioBuffer.length * numOfChan * 2 + 44,
-              bufferArray = new ArrayBuffer(length),
-              view = new DataView(bufferArray),
-              channels = [], i, sample, offset = 0, pos = 0;
+          // Encode to WAV (Python speech_recognition requires WAV/FLAC)
+          const numOfChan = audioBuffer.numberOfChannels
+          const length = audioBuffer.length * numOfChan * 2 + 44
+          const bufferArray = new ArrayBuffer(length)
+          const view = new DataView(bufferArray)
+          const channels = []
+          let sample, offset = 0, pos = 0;
         
           const setUint16 = (data: number) => { view.setUint16(pos, data, true); pos += 2; }
           const setUint32 = (data: number) => { view.setUint32(pos, data, true); pos += 4; }
@@ -247,40 +248,43 @@ export function ChatPanel() {
           setUint32(0x61746164); // "data" chunk
           setUint32(length - pos - 4); // chunk length
           
-          for (i = 0; i < audioBuffer.numberOfChannels; i++) channels.push(audioBuffer.getChannelData(i));
+          for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+            channels.push(audioBuffer.getChannelData(i));
+          }
+          
           while (pos < length) {
-            for (i = 0; i < numOfChan; i++) {
+            for (let i = 0; i < numOfChan; i++) {
               sample = Math.max(-1, Math.min(1, channels[i][offset]));
-              sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
+              sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
               view.setInt16(pos, sample, true);
               pos += 2;
             }
             offset++;
           }
           
-          const wavBlob = new Blob([bufferArray], { type: "audio/wav" })
+          const wavBlob = new Blob([bufferArray], { type: 'audio/wav' })
+          
           const formData = new FormData()
+          // chat.py endpoint expects file parameter named "audio"
           formData.append('audio', wavBlob, 'voice.wav')
-
+          
           const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-          const response = await fetch(`${apiHost}/api/v1/chat/transcribe`, {
+          const res = await fetch(`${apiHost}/api/v1/chat/transcribe`, {
             method: 'POST',
-            body: formData,
+            body: formData
           })
           
-          if (response.ok) {
-            const data = await response.json()
-            if (data.text) {
-              setInput(prev => prev ? `${prev} ${data.text}` : data.text)
-            } else if (data.error) {
-              alert(data.error)
-            }
-          } else {
-            alert("Lỗi kết nối tới máy chủ.")
+          if (!res.ok) throw new Error('Voice API failed')
+          const data = await res.json()
+          
+          if (data.text) {
+             sendMessage(data.text)
+          } else if (data.error) {
+             alert(data.error)
           }
-        } catch (error) {
-          console.error("Transcription error:", error)
-          alert("Lỗi khi xử lý dữ liệu giọng nói.")
+        } catch (err: any) {
+          console.error(err)
+          alert("Lỗi nhận diện giọng nói: " + err.message)
         } finally {
           setIsLoading(false)
           setToolStatus('')
@@ -291,9 +295,9 @@ export function ChatPanel() {
       recorder.start()
       setMediaRecorder(recorder)
       setIsListening(true)
-    } catch (error) {
-      console.error("Mic access denied", error)
-      alert("Không thể truy cập Micro. Vui lòng kiểm tra quyền của trình duyệt.")
+    } catch (err) {
+      console.error(err)
+      alert("Không thể truy cập microphone.")
     }
   }
 
