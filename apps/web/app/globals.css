@@ -60,11 +60,11 @@ html, body {
 
 /* Glassmorphism Panel styles */
 .glass-panel {
-  background: var(--bg-surface-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-premium);
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 }
 
 /* Layout helpers */
@@ -238,7 +238,7 @@ html, body {
 .weather-detail-panel {
   position: absolute;
   top: 100px;
-  left: 20px;
+  right: 440px;
   width: 380px;
   max-height: calc(100vh - 150px);
   border-radius: 16px;
@@ -825,4 +825,178 @@ html, body {
   color: #9ca3af;
   margin-top: 4px;
   margin-bottom: 0;
+}
+
+/* MOBILE RESPONSIVENESS */
+@media (max-width: 768px) {
+  .app-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .map-viewport {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+  
+  .sidebar-right {
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    height: 65vh;
+    z-index: 3000 !important;
+    background: var(--bg-panel);
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.4s;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .sidebar-right.closed {
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  .mobile-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 2999;
+    opacity: 1;
+    transition: opacity 0.4s;
+  }
+  
+  .mobile-backdrop.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  .bottom-sheet-handle {
+    width: 40px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    margin: 12px auto;
+  }
+  
+  .mobile-chat-fab {
+    display: flex !important;
+  }
+  
+  /* Reset inline styles applied in React */
+  .routing-container {
+    top: 75px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 95% !important;
+    z-index: 2000 !important;
+  }
+  
+  .weather-detail-panel {
+    top: auto !important;
+    bottom: 85px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+    width: 95% !important;
+    max-height: 55vh !important;
+    overflow-y: auto !important;
+    z-index: 2000 !important;
+  }
+  
+  .floating-header {
+    width: 90% !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    top: 10px !important;
+    z-index: 2000 !important;
+  }
+  
+  .brand-subtitle {
+    display: none;
+  }
+  
+  .layer-selection-bar {
+    top: auto !important;
+    bottom: 25px !important;
+    left: 20px !important;
+    right: auto !important;
+    flex-direction: row;
+    width: auto !important;
+    padding: 6px !important;
+    z-index: 2000 !important;
+  }
+  
+  .layer-selection-bar span {
+    display: none;
+  }
+
+  .layer-selection-bar .btn-toggle {
+    padding: 8px !important;
+  }
+
+  .map-legend {
+    bottom: 85px !important;
+    left: 20px !important;
+    width: calc(100% - 40px) !important;
+    max-width: 300px;
+    z-index: 1000 !important;
+  }
+}
+
+/* Hide FAB on desktop */
+.mobile-chat-fab {
+  display: none;
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+  cursor: pointer;
+  transition: all 0.2s;
+  animation: pulse-soft 2.5s infinite;
+}
+
+.mobile-chat-fab:hover {
+  transform: scale(1.05);
+  background: var(--accent-primary-hover);
+}
+
+@keyframes pulse-soft {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }

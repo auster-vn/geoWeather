@@ -36,5 +36,5 @@ export const useWeatherStore = create<WeatherState>((set) => ({
     zoom: 2.0,
     pitch: 0
   },
-  setMapViewport: (viewport) => set({ mapViewport: viewport })
+  setMapViewport: (viewport) => set({ mapViewport: viewport }),
 }))
