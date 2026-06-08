@@ -238,7 +238,7 @@ html, body {
 .weather-detail-panel {
   position: absolute;
   top: 100px;
-  right: 440px;
+  left: 20px;
   width: 380px;
   max-height: calc(100vh - 150px);
   border-radius: 16px;
