@@ -62,7 +62,8 @@ GeoWeather là một hệ thống bản đồ thời tiết thời gian thực �
 ### Công dụng (Use Cases)
 * **Theo dõi thời tiết thời gian thực:** Cập nhật liên tục trạng thái thời tiết, nhiệt độ, lượng mưa, tốc độ gió trên bản đồ.
 * **Phân tích không gian:** Phân mảnh bản đồ thành lưới H3 đa độ phân giải, giúp phân tích xu hướng thời tiết theo vùng chính xác.
-* **Trợ lý AI (GeoWeather Assistant):** Tích hợp công cụ tương tác bằng giọng nói và văn bản tự nhiên, tự động xử lý ý định (intent) và trả về thông tin thời tiết kèm theo bản đồ vị trí trực quan.
+* **Trợ lý AI siêu nhận thức vị trí (Context-aware AI):** Tự động trích xuất và ghi nhớ tọa độ GPS (lat/lon) xuyên suốt các lượt chat. Chỉ cần chia sẻ vị trí một lần, AI có thể liên tục dự báo mưa, tia UV và nhiệt độ chính xác đến từng mét vuông mà không cần hỏi lại tên tỉnh/thành phố.
+* **Giao diện đa nền tảng mượt mà:** Tối ưu hóa trải nghiệm trên thiết bị di động (Mobile UI) với Bottom Sheet phong cách iOS, hiệu ứng Glassmorphism, và quản lý không gian bản đồ thông minh.
 * **Giám sát hệ thống:** Thu thập các số liệu vận hành và hiệu suất hệ thống thời gian thực với Prometheus và Grafana.
 
 <p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>

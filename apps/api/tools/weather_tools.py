@@ -87,76 +87,54 @@ def weather_tool_definitions() -> List[Dict[str, Any]]:
         {
             "name": "get_rain_forecast",
             "description": (
-                "Returns a 7-day hourly rain and temperature forecast for a city. "
-                "Use this when the user asks WHEN it will rain, rain probability, "
-                "or what the temperature/weather will be like at a specific hour."
+                "Returns a 7-day hourly rain and temperature forecast. "
+                "Provide city_name OR lat and lon."
             ),
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "city_name": {
-                        "type": "string",
-                        "description": "City name, e.g. 'Da Nang', 'Hanoi'."
-                    },
-                    "target_date": {
-                        "type": "string",
-                        "description": "Optional ISO date string 'YYYY-MM-DD'."
-                    }
-                },
-                "required": ["city_name"]
+                    "city_name": {"type": "string"},
+                    "lat": {"type": "number"},
+                    "lon": {"type": "number"},
+                    "target_date": {"type": "string"}
+                }
             }
         },
         {
             "name": "get_daily_forecast",
-            "description": (
-                "Returns a 7-day daily summary forecast including max/min temperature, UV index, and conditions. "
-                "Use this when the user asks for a general forecast for tomorrow, next week, or specific days."
-            ),
+            "description": "Returns a 7-day daily forecast summary. Provide city_name OR lat and lon.",
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "city_name": {
-                        "type": "string",
-                        "description": "City name, e.g. 'Ho Chi Minh'."
-                    }
-                },
-                "required": ["city_name"]
+                    "city_name": {"type": "string"},
+                    "lat": {"type": "number"},
+                    "lon": {"type": "number"}
+                }
             }
         },
         {
             "name": "get_air_quality_and_uv",
-            "description": (
-                "Returns current Air Quality Index (AQI), PM2.5, PM10, and UV Index for a city. "
-                "Use this when the user asks about air quality, pollution, dust, or UV/sun intensity."
-            ),
+            "description": "Returns AQI, PM2.5, and UV index. Provide city_name OR lat and lon.",
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "city_name": {
-                        "type": "string",
-                        "description": "City name, e.g. 'Hanoi'."
-                    }
-                },
-                "required": ["city_name"]
+                    "city_name": {"type": "string"},
+                    "lat": {"type": "number"},
+                    "lon": {"type": "number"}
+                }
             }
         },
         {
             "name": "get_sun_times",
-            "description": (
-                "Returns sunrise and sunset times for a city. "
-                "Use this when the user asks about dawn, dusk, hoang hon, or binh minh."
-            ),
+            "description": "Returns sunrise and sunset times. Provide city_name OR lat and lon.",
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "city_name": {
-                        "type": "string"
-                    },
-                    "target_date": {
-                        "type": "string"
-                    }
-                },
-                "required": ["city_name"]
+                    "city_name": {"type": "string"},
+                    "lat": {"type": "number"},
+                    "lon": {"type": "number"},
+                    "target_date": {"type": "string"}
+                }
             }
         },
         {
@@ -414,16 +392,22 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
     # ── get_rain_forecast ─────────────────────────────────────────────────────
     elif name == "get_rain_forecast":
         city_name   = arguments.get("city_name")
-        target_date = arguments.get("target_date")  # optional "YYYY-MM-DD"
+        lat         = arguments.get("lat")
+        lon         = arguments.get("lon")
+        target_date = arguments.get("target_date")
 
-        city = await _resolve_city(city_name, db)
-        if not city:
-            return {"error": f"City '{city_name}' not found."}
+        if lat is not None and lon is not None:
+            timezone = "Asia/Bangkok"
+        else:
+            city = await _resolve_city(city_name, db)
+            if not city:
+                return {"error": f"City '{city_name}' not found."}
+            lat = city["lat"]
+            lon = city["lon"]
+            timezone = city.get("timezone", "Asia/Bangkok")
 
         try:
-            data = await _fetch_open_meteo_forecast(
-                city["lat"], city["lon"], city.get("timezone", "Asia/Bangkok")
-            )
+            data = await _fetch_open_meteo_forecast(lat, lon, timezone)
         except Exception as e:
             return {"error": f"Failed to fetch forecast from Open-Meteo: {e}"}
 
@@ -477,9 +461,9 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
             })
 
         return {
-            "city": city["city_name"],
-            "lat": city["lat"],
-            "lon": city["lon"],
+            "city": city_name if city_name else f"{lat},{lon}",
+            "lat": lat,
+            "lon": lon,
             "target_date": target_date,
             "summary": {
                 "first_likely_rain": first_rain,
@@ -492,14 +476,21 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
     # ── get_daily_forecast ────────────────────────────────────────────────────
     elif name == "get_daily_forecast":
         city_name = arguments.get("city_name")
-        city = await _resolve_city(city_name, db)
-        if not city:
-            return {"error": f"City '{city_name}' not found."}
+        lat       = arguments.get("lat")
+        lon       = arguments.get("lon")
+        
+        if lat is not None and lon is not None:
+            timezone = "Asia/Bangkok"
+        else:
+            city = await _resolve_city(city_name, db)
+            if not city:
+                return {"error": f"City '{city_name}' not found."}
+            lat = city["lat"]
+            lon = city["lon"]
+            timezone = city.get("timezone", "Asia/Bangkok")
 
         try:
-            data = await _fetch_open_meteo_forecast(
-                city["lat"], city["lon"], city.get("timezone", "Asia/Bangkok")
-            )
+            data = await _fetch_open_meteo_forecast(lat, lon, timezone)
         except Exception as e:
             return {"error": f"Failed to fetch forecast from Open-Meteo: {e}"}
 
@@ -566,16 +557,22 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
     # ── get_sun_times ─────────────────────────────────────────────────────────
     elif name == "get_sun_times":
         city_name   = arguments.get("city_name")
+        lat         = arguments.get("lat")
+        lon         = arguments.get("lon")
         target_date = arguments.get("target_date")
 
-        city = await _resolve_city(city_name, db)
-        if not city:
-            return {"error": f"City '{city_name}' not found."}
+        if lat is not None and lon is not None:
+            timezone = "Asia/Bangkok"
+        else:
+            city = await _resolve_city(city_name, db)
+            if not city:
+                return {"error": f"City '{city_name}' not found."}
+            lat = city["lat"]
+            lon = city["lon"]
+            timezone = city.get("timezone", "Asia/Bangkok")
 
         try:
-            data = await _fetch_open_meteo_forecast(
-                city["lat"], city["lon"], city.get("timezone", "Asia/Bangkok")
-            )
+            data = await _fetch_open_meteo_forecast(lat, lon, timezone)
         except Exception as e:
             return {"error": f"Failed to fetch sun times from Open-Meteo: {e}"}
 
