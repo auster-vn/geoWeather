@@ -5,6 +5,7 @@
   "packageManager": "npm@11.4.2",
   "workspaces": [
     "apps/web"
+  ]
   ],
   "scripts": {
     "build": "turbo run build",
@@ -12,6 +13,6 @@
     "lint": "turbo run lint"
   },
   "devDependencies": {
-    "turbo": "^2.9.18"
+    "turbo": "latest"
   }
 }
