@@ -18,15 +18,18 @@ postgres_engine = create_async_engine(
 )
 
 # Engine for TimescaleDB
-timescale_engine = create_async_engine(
-    settings.TIMESCALE_URL,
-    echo=False,
-    future=True,
-    pool_size=2,
-    max_overflow=2,
-    pool_pre_ping=True,
-    pool_recycle=1800
-)
+if settings.TIMESCALE_URL == settings.DATABASE_URL or not settings.TIMESCALE_URL:
+    timescale_engine = postgres_engine
+else:
+    timescale_engine = create_async_engine(
+        settings.TIMESCALE_URL,
+        echo=False,
+        future=True,
+        pool_size=2,
+        max_overflow=2,
+        pool_pre_ping=True,
+        pool_recycle=1800
+    )
 
 # Session makers
 PostgresSessionLocal = sessionmaker(
