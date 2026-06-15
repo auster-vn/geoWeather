@@ -172,12 +172,13 @@ def weather_tool_definitions() -> List[Dict[str, Any]]:
         },
         {
             "name": "get_weather_by_coords",
-            "description": "Returns current weather parameters for the nearest city to specified lat/lon coordinates.",
+            "description": "Returns current weather parameters for the nearest city to specified lat/lon coordinates. If the user asked for a specific city name (e.g., 'Hồ Chí Minh') but you decided to use coordinates to search, you MUST pass that name into 'location_name'.",
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "lat": {"type": "number", "description": "Latitude coordinate"},
-                    "lon": {"type": "number", "description": "Longitude coordinate"}
+                    "lon": {"type": "number", "description": "Longitude coordinate"},
+                    "location_name": {"type": "string", "description": "Optional. The original city or location name the user asked for (e.g., 'Hồ Chí Minh'). If provided, this name will be used instead of reverse-geocoding."}
                 },
                 "required": ["lat", "lon"]
             }
@@ -500,8 +501,13 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
 
         row_dict = dict(row)
 
-        # Reverse-geocode the user's exact coordinates → suburb/ward level name
-        place_name = await _reverse_geocode(lat, lon)
+        location_name = arguments.get("location_name")
+        if location_name:
+            # If the LLM passed the original search name, use it
+            place_name = location_name
+        else:
+            # Otherwise, reverse-geocode the user's exact coordinates → suburb/ward level name
+            place_name = await _reverse_geocode(lat, lon)
         row_dict["place_name"] = place_name
 
         if row_dict.get("temperature") is None:
