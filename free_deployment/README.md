@@ -48,25 +48,42 @@ Cả Render và Koyeb đều cung cấp dịch vụ Hosting Python Web Service m
    - **Build Command**: `pip install -r pyproject.toml` (hoặc cài đặt thông qua `pip install poetry && poetry install` tùy thuộc cách quản lý gói của bạn)
    - **Start Command**: `uvicorn apps.api.main:app --host 0.0.0.0 --port $PORT`
 4. Thêm các **Environment Variables**:
-   - `DATABASE_URL`: *<Chuỗi kết nối Supabase của bạn>*
-   - `TIMESCALE_URL`: *<Sử dụng chung chuỗi kết nối Supabase ở trên>*
-   - `REDIS_URL`: *<Chuỗi kết nối Upstash Redis của bạn>*
-   - `GEMINI_API_KEY`: *<API Key lấy từ Google AI Studio>*
+    - `DATABASE_URL`: *<Chuỗi kết nối Supabase của bạn, khuyên dùng Direct URL ở cổng 5432 để tránh lỗi định dạng và prepared statements, ví dụ: postgresql://postgres.xzqprlvqfcndzwljxxzf:MẬT_KHẨU_ĐÃ_MÃ_HÓA@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres>*
+    - `TIMESCALE_URL`: *<Sử dụng chung chuỗi kết nối Supabase cổng 5432 ở trên>*
+    - `REDIS_URL`: *<Chuỗi kết nối Upstash Redis của bạn>*
+    - `GEMINI_API_KEY`: *<API Key lấy từ Google AI Studio>*
+
+> [!IMPORTANT]
+> **Lưu ý đặc biệt về chuỗi kết nối Supabase (DATABASE_URL):**
+> 1. Nếu mật khẩu của bạn chứa các ký tự đặc biệt như `?` hay `#`, bạn bắt buộc phải mã hóa URL (URL encode) các ký tự đó. Ví dụ: Ký tự `?` phải được viết thành `%3F`. Do đó, mật khẩu kết thúc bằng `??` sẽ trở thành `%3F%3F`.
+> 2. Hãy sử dụng **Direct URL cổng 5432** thay vì cổng 6543 (transaction mode pooler) cho `DATABASE_URL` và `TIMESCALE_URL` của Render. Thư viện `asyncpg` sử dụng Prepared Statements để tối ưu hóa truy vấn, tính năng này không được hỗ trợ ổn định trên cổng 6543 (PgBouncer Transaction mode) và dễ gây ra các lỗi kết nối.
 
 *Lưu ý: Bạn cần thay đổi tệp `apps/api/routers/weather.py` theo hướng dẫn tại [fastapi_app_patch.py](file:///home/cp/Documents/geoWeather/free_deployment/fastapi_app_patch.py) để kích hoạt cơ chế đồng bộ trực tiếp không dùng Kafka.*
 
 ---
 
 ## 🌐 Bước 4: Deploy Frontend (Vercel)
-Vercel là dịch vụ lưu trữ tối ưu nhất cho Next.js Monorepo.
+Vercel là dịch vụ lưu trữ tối ưu nhất cho Next.js Monorepo. Dưới đây là cách cấu hình để vượt qua lỗi Turborepo thiếu trường `packageManager`:
 
+### Cách 1: Bỏ qua Turborepo (Khuyên dùng)
 1. Đăng ký tài khoản tại [Vercel.com](https://vercel.com/).
 2. Nhấp **Add New > Project**, chọn Github Repository chứa mã nguồn của bạn.
 3. Trong phần cấu hình Monorepo (Next.js Monorepo):
    - **Framework Preset**: `Next.js`
    - **Root Directory**: `.` (để ở thư mục gốc của Monorepo)
-   - **Build Command**: `npx turbo run build --filter=web`
+   - **Build Command**: Thay đổi mặc định thành `npm run build --prefix apps/web`
    - **Output Directory**: `apps/web/.next`
+
+### Cách 2: Đặt Thư mục gốc trực tiếp vào ứng dụng web
+- Thiết lập **Root Directory** trong Vercel thành `apps/web` thay vì `.`. Vercel sẽ tự động phát hiện dự án Next.js độc lập và dùng lệnh build tiêu chuẩn (`next build`) mà không chạy Turborepo.
+
+### Cách 3: Sửa file package.json gốc
+- Thêm trường `"packageManager"` vào tệp `package.json` ở thư mục gốc của bạn:
+  ```json
+  "packageManager": "npm@10.2.4"
+  ```
+  *(Bạn cần thay đổi phiên bản npm tương ứng với môi trường của mình).*
+
 4. Thiết lập **Environment Variables**:
    - `NEXT_PUBLIC_API_URL`: *<URL dịch vụ Backend API đã deploy ở Bước 3, ví dụ: https://geoweather-api.onrender.com>*
    - `NEXT_PUBLIC_MAPBOX_TOKEN`: *(Không bắt buộc / Để trống - Dự án sử dụng bản đồ nền miễn phí từ CartoDB nên không cần token này).*
