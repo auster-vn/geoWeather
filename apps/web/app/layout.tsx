@@ -12,9 +12,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" />
+        {/* Restore theme before paint to avoid flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(){
+            var t = localStorage.getItem('geoweather-theme');
+            document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+          })()
+        `}} />
       </head>
       <body>
         {children}

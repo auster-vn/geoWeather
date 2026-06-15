@@ -21,6 +21,119 @@ async def get_redis_client():
 
 async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> dict:
     """Fetch data from HTTP or Redis cache."""
+    # --- MOCK OPEN-METEO (For local testing) ---
+    if "open-meteo.com" in url:
+        import math
+        from datetime import datetime, timedelta
+        import zoneinfo
+        
+        tz_str = params.get("timezone", "Asia/Bangkok")
+        try:
+            zone = zoneinfo.ZoneInfo(tz_str)
+        except Exception:
+            zone = zoneinfo.ZoneInfo("UTC")
+            
+        now = datetime.now(zone)
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        data = {}
+        
+        if "air-quality" in url:
+            data["current"] = {
+                "us_aqi": 42,
+                "pm2_5": 12.5,
+                "pm10": 20.0,
+                "uv_index": 6.5,
+                "nitrogen_dioxide": 15.0,
+                "ozone": 30.0
+            }
+            return data
+            
+        if "current" in params:
+            data["current"] = {
+                "temperature_2m": 30.5,
+                "apparent_temperature": 34.0,
+                "relative_humidity_2m": 65,
+                "wind_speed_10m": 12.5,
+                "wind_direction_10m": 180,
+                "precipitation": 0.0,
+                "weather_code": 2,
+                "cloud_cover": 45,
+                "pressure_msl": 1012,
+                "visibility": 10000
+            }
+            
+        if "hourly" in params:
+            days = int(params.get("forecast_days", 7))
+            hourly_time = []
+            hourly_precip_prob = []
+            hourly_precip = []
+            hourly_weather_code = []
+            hourly_temp = []
+            
+            for i in range(24 * days):
+                t = today + timedelta(hours=i)
+                hourly_time.append(t.strftime("%Y-%m-%dT%H:00"))
+                temp = 28 + 5 * math.sin((i - 6) * math.pi / 12)
+                hourly_temp.append(round(temp, 1))
+                
+                if 14 <= t.hour <= 16:
+                    hourly_precip_prob.append(60)
+                    hourly_precip.append(2.5)
+                    hourly_weather_code.append(61)
+                else:
+                    hourly_precip_prob.append(10)
+                    hourly_precip.append(0.0)
+                    hourly_weather_code.append(2)
+                    
+            data["hourly"] = {
+                "time": hourly_time,
+                "precipitation_probability": hourly_precip_prob,
+                "precipitation": hourly_precip,
+                "weather_code": hourly_weather_code,
+                "temperature_2m": hourly_temp
+            }
+            
+        if "daily" in params:
+            days = int(params.get("forecast_days", 7))
+            daily_time = []
+            daily_sunrise = []
+            daily_sunset = []
+            daily_precip_sum = []
+            daily_precip_hours = []
+            daily_weather_code = []
+            daily_tmax = []
+            daily_tmin = []
+            daily_uv = []
+            
+            for i in range(days):
+                d = today + timedelta(days=i)
+                date_str = d.strftime("%Y-%m-%d")
+                daily_time.append(date_str)
+                daily_sunrise.append(f"{date_str}T05:30")
+                daily_sunset.append(f"{date_str}T18:15")
+                daily_precip_sum.append(7.5)
+                daily_precip_hours.append(3.0)
+                daily_weather_code.append(61)
+                daily_tmax.append(33.0)
+                daily_tmin.append(24.0)
+                daily_uv.append(9.0)
+                
+            data["daily"] = {
+                "time": daily_time,
+                "sunrise": daily_sunrise,
+                "sunset": daily_sunset,
+                "precipitation_sum": daily_precip_sum,
+                "precipitation_hours": daily_precip_hours,
+                "weather_code": daily_weather_code,
+                "temperature_2m_max": daily_tmax,
+                "temperature_2m_min": daily_tmin,
+                "uv_index_max": daily_uv
+            }
+            
+        return data
+    # --- END MOCK ---
+
     r_client = await get_redis_client()
     # Create a stable cache key
     sorted_params = dict(sorted(params.items()))
@@ -156,6 +269,44 @@ def weather_tool_definitions() -> List[Dict[str, Any]]:
 
 
 # ─── Shared helpers ───────────────────────────────────────────────────────────
+
+async def _reverse_geocode(lat: float, lon: float) -> str:
+    """Convert coordinates to a human-readable place name via Nominatim (OSM).
+    Returns e.g. 'Phường Đông Hòa, Việt Nam' or falls back to 'Vị trí của bạn'.
+    """
+    url = "https://nominatim.openstreetmap.org/reverse"
+    params = {
+        "lat": lat,
+        "lon": lon,
+        "format": "json",
+        "accept-language": "vi",
+        "zoom": 14,          # ward/suburb level
+        "addressdetails": 1,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                url, params=params,
+                headers={"User-Agent": "GeoWeather/1.0"}
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                addr = data.get("address", {})
+                # Priority: suburb/quarter/village → district → city → state
+                suburb  = (addr.get("suburb") or addr.get("quarter")
+                           or addr.get("village") or addr.get("town"))
+                country = addr.get("country", "")
+                if suburb:
+                    return f"{suburb}, {country}"
+                city = (addr.get("city") or addr.get("county")
+                        or addr.get("state") or "")
+                if city:
+                    return f"{city}, {country}"
+                return data.get("display_name", "Vị trí của bạn")
+    except Exception as e:
+        logger.warning(f"Reverse geocoding failed for ({lat},{lon}): {e}")
+    return "Vị trí của bạn"
+
 
 async def _resolve_city(city_name: str, db: AsyncSession) -> Optional[Dict[str, Any]]:
     """Look up a city's coordinates and metadata from the PostGIS DB."""
@@ -346,8 +497,13 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
         row = result.mappings().first()
         if not row:
             return {"error": "No near weather station found."}
-            
+
         row_dict = dict(row)
+
+        # Reverse-geocode the user's exact coordinates → suburb/ward level name
+        place_name = await _reverse_geocode(lat, lon)
+        row_dict["place_name"] = place_name
+
         if row_dict.get("temperature") is None:
             # Fallback live fetch
             try:
@@ -376,7 +532,7 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
                 logger.error(f"Failed live fetch in get_weather_by_coords: {e}")
         else:
             row_dict["condition"] = _wmo_desc(row_dict.get("weather_code", 0))
-            
+
         return row_dict
 
     # ── compare_cities ────────────────────────────────────────────────────────

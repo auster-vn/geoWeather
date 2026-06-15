@@ -28,7 +28,10 @@ function getTemperatureColor(temp: number): [number, number, number] {
   return TEMPERATURE_COLORS[5]
 }
 
-export function WeatherMap() {
+const DARK_STYLE  = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+const LIGHT_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
+
+export function WeatherMap({ isDark = false }: { isDark?: boolean }) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const overlayRef = useRef<MapboxOverlay | null>(null)
@@ -95,7 +98,7 @@ export function WeatherMap() {
   useEffect(() => {
     if (!mapContainerRef.current) return
 
-    const styleUrl = process.env.NEXT_PUBLIC_MAPLIBRE_STYLE || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+    const styleUrl = isDark ? DARK_STYLE : LIGHT_STYLE
     
     let map: maplibregl.Map;
     try {
@@ -145,7 +148,22 @@ export function WeatherMap() {
     return () => {
       map.remove()
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Swap map style when theme changes
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const targetStyle = isDark ? DARK_STYLE : LIGHT_STYLE
+    // Only swap if current style differs
+    try {
+      const current = (map.getStyle() as any)?.name || ''
+      if ((isDark && current.toLowerCase().includes('positron')) ||
+          (!isDark && current.toLowerCase().includes('dark'))) {
+        map.setStyle(targetStyle)
+      }
+    } catch { map.setStyle(targetStyle) }
+  }, [isDark])
 
   // Fly to selectedLocation when it updates from external components (e.g. ChatPanel)
   useEffect(() => {
@@ -250,8 +268,8 @@ export function WeatherMap() {
       )}
       
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm z-10">
-          <div className="flex flex-col items-center gap-3 text-emerald-400 font-medium">
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(2,6,23,0.7)' : 'rgba(232,244,253,0.7)', backdropFilter: 'blur(8px)', zIndex: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: isDark ? '#34d399' : '#0ea5e9', fontWeight: 500 }}>
             <Activity className="animate-spin w-8 h-8" />
             <span>Nạp bản đồ GIS thời tiết...</span>
           </div>

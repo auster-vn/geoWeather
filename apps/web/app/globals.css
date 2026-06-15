@@ -1,27 +1,402 @@
-/* Custom Dark-Mode Design System - GeoWeather Platform */
+/* Custom Design System - GeoWeather Platform */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 @import "maplibre-gl/dist/maplibre-gl.css";
 
+/* ─── Dark mode (defaults) ──────────────────────────────────────────────────── */
 :root {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  
+
   --bg-base: #030712;
   --bg-surface: #0f172a;
   --bg-surface-glass: rgba(15, 23, 42, 0.75);
-  
+  --bg-panel: #0f172a;
+
   --border-color: rgba(51, 65, 85, 0.5);
   --border-active: rgba(16, 185, 129, 0.6);
-  
+
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  
-  --accent-primary: #10b981; /* Emerald */
+
+  --accent-primary: #10b981;
   --accent-primary-hover: #34d399;
   --accent-glow: rgba(16, 185, 129, 0.25);
-  
+  --accent-text-on: #030712;
+
   --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-float: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  /* component-specific */
+  --glass-bg: rgba(15, 23, 42, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --chat-bg: #0f172a;
+  --chat-user-bubble: linear-gradient(135deg, #10b981, #059669);
+  --chat-user-text: #030712;
+  --chat-assistant-bg: rgba(30, 41, 59, 0.4);
+  --chat-input-bg: rgba(15, 23, 42, 0.6);
+  --model-dropdown-bg: #202124;
+  --model-dropdown-border: #3c4043;
+  --model-option-hover: #303134;
+  --model-text: #e2e8f0;
+  --model-desc: #9ca3af;
+  --input-color: #fff;
+  --sidebar-shadow: -10px 0 30px -10px rgba(0, 0, 0, 0.5);
+
+  --theme-transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* ─── Light mode ────────────────────────────────────────────────────────────── */
+html[data-theme="light"] {
+  /* Sky-blue gradient base — Apple Weather inspired */
+  --bg-base: #e8f4fd;
+  --bg-surface: #ffffff;
+  --bg-surface-glass: rgba(255, 255, 255, 0.9);
+  --bg-panel: #f8fbff;
+
+  --border-color: rgba(186, 210, 235, 0.7);
+  --border-active: rgba(14, 165, 233, 0.5);
+
+  --text-primary: #0c1a2e;
+  --text-secondary: #3d5a7a;
+  --text-muted: #7da3c4;
+
+  --accent-primary: #0ea5e9;        /* Sky blue */
+  --accent-primary-hover: #38bdf8;
+  --accent-glow: rgba(14, 165, 233, 0.2);
+  --accent-text-on: #ffffff;
+
+  --shadow-premium: 0 10px 40px -10px rgba(14, 100, 180, 0.18);
+  --shadow-card: 0 4px 20px rgba(14, 100, 180, 0.1);
+  --shadow-float: 0 8px 40px rgba(14, 100, 180, 0.15);
+
+  /* Glass panels: frosted white */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(186, 210, 235, 0.6);
+
+  /* Chat */
+  --chat-bg: linear-gradient(160deg, #f0f8ff 0%, #e8f4fd 100%);
+  --chat-user-bubble: linear-gradient(135deg, #0ea5e9, #0284c7);
+  --chat-user-text: #ffffff;
+  --chat-assistant-bg: rgba(255, 255, 255, 0.85);
+  --chat-input-bg: rgba(255, 255, 255, 0.95);
+  --model-dropdown-bg: #ffffff;
+  --model-dropdown-border: #bbd2eb;
+  --model-option-hover: #f0f8ff;
+  --model-text: #0c1a2e;
+  --model-desc: #3d5a7a;
+  --input-color: #0c1a2e;
+  --sidebar-shadow: -4px 0 24px rgba(14, 100, 180, 0.12);
+}
+
+/* ─── Smooth theme transition ───────────────────────────────────────────────── */
+html *, html body {
+  transition:
+    background-color var(--theme-transition),
+    border-color var(--theme-transition),
+    color var(--theme-transition),
+    box-shadow var(--theme-transition),
+    fill var(--theme-transition),
+    opacity var(--theme-transition);
+}
+canvas, .maplibregl-canvas, svg * {
+  transition: none !important;
+}
+
+/* ─── Light mode: override hardcoded dark colors in components ─────────────── */
+html[data-theme="light"] .glass-panel {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+html[data-theme="light"] .sidebar-right {
+  background: var(--bg-panel);
+  box-shadow: var(--sidebar-shadow);
+  border-left: 1px solid var(--border-color);
+}
+
+html[data-theme="light"] .chat-container {
+  background: var(--chat-bg);
+}
+
+html[data-theme="light"] .chat-header {
+  background: rgba(255, 255, 255, 0.7);
+  border-bottom-color: var(--border-color);
+  backdrop-filter: blur(12px);
+}
+
+html[data-theme="light"] .chat-header-icon {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.2);
+  color: var(--accent-primary);
+}
+
+html[data-theme="light"] .chat-status-dot {
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary);
+}
+
+html[data-theme="light"] .chat-messages-container {
+  background: transparent;
+}
+
+html[data-theme="light"] .chat-bubble.user {
+  background: var(--chat-user-bubble);
+  color: var(--chat-user-text);
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.25);
+}
+
+html[data-theme="light"] .chat-bubble.assistant {
+  background: var(--chat-assistant-bg);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .chat-input-form {
+  background: rgba(255, 255, 255, 0.8);
+  border-top-color: var(--border-color);
+  backdrop-filter: blur(12px);
+}
+
+html[data-theme="light"] .chat-input-wrapper {
+  background: var(--chat-input-bg);
+  border-color: var(--border-color);
+  box-shadow: 0 2px 12px rgba(14, 100, 180, 0.08);
+}
+
+html[data-theme="light"] .chat-input-wrapper:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+}
+
+html[data-theme="light"] .chat-input-field {
+  color: var(--input-color);
+}
+
+html[data-theme="light"] .chat-input-field::placeholder {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .chat-btn-send {
+  background: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+}
+
+html[data-theme="light"] .chat-btn-send:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+html[data-theme="light"] .chat-btn-send:disabled {
+  background: rgba(186, 210, 235, 0.4);
+  color: var(--text-muted);
+}
+
+/* Model selector */
+html[data-theme="light"] .model-selector-btn {
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .model-selector-btn:hover {
+  background-color: rgba(14, 165, 233, 0.08);
+}
+
+html[data-theme="light"] .model-selector-dropdown {
+  background-color: var(--model-dropdown-bg);
+  border-color: var(--model-dropdown-border);
+  box-shadow: 0 12px 32px rgba(14, 100, 180, 0.18);
+}
+
+html[data-theme="light"] .model-selector-option:hover {
+  background-color: var(--model-option-hover);
+}
+
+html[data-theme="light"] .model-selector-option-title {
+  color: var(--model-text);
+}
+
+html[data-theme="light"] .model-selector-option-desc {
+  color: var(--model-desc);
+}
+
+html[data-theme="light"] .model-selector-badge.local {
+  background-color: rgba(14, 165, 233, 0.1);
+  color: #0ea5e9;
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+html[data-theme="light"] .model-selector-badge.gemini {
+  background-color: #f0f8ff;
+  color: #3d5a7a;
+  border-color: #bbd2eb;
+}
+
+html[data-theme="light"] .model-selector-check {
+  color: var(--accent-primary);
+}
+
+/* Weather detail panel */
+html[data-theme="light"] .weather-detail-panel {
+  box-shadow: var(--shadow-float);
+}
+
+html[data-theme="light"] .weather-detail-header {
+  background: rgba(255, 255, 255, 0.6);
+  border-bottom-color: var(--border-color);
+}
+
+html[data-theme="light"] .weather-detail-body {
+  background: transparent;
+}
+
+html[data-theme="light"] .weather-detail-main-card {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme="light"] .weather-temp-icon {
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.2);
+  color: var(--accent-primary);
+}
+
+html[data-theme="light"] .weather-temp-val {
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .weather-status-desc {
+  color: var(--accent-primary);
+}
+
+html[data-theme="light"] .weather-ws-status {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: var(--border-color);
+}
+
+html[data-theme="light"] .weather-grid-item {
+  background: rgba(255, 255, 255, 0.65);
+  border-color: var(--border-color);
+  box-shadow: 0 2px 8px rgba(14, 100, 180, 0.06);
+}
+
+html[data-theme="light"] .weather-grid-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme="light"] .weather-grid-icon.wind { background: rgba(14, 165, 233, 0.1); color: #0ea5e9; }
+html[data-theme="light"] .weather-grid-icon.humidity { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+html[data-theme="light"] .weather-grid-icon.rain { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+html[data-theme="light"] .weather-grid-icon.cloud { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+
+/* Layer selection bar */
+html[data-theme="light"] .layer-selection-bar {
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+}
+
+html[data-theme="light"] .btn-toggle {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .btn-toggle:hover {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+html[data-theme="light"] .btn-toggle.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+}
+
+/* Sync button */
+html[data-theme="light"] .btn-sync {
+  background: linear-gradient(135deg, var(--accent-primary), #0284c7);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+}
+
+html[data-theme="light"] .btn-sync:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-primary-hover), var(--accent-primary));
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.4);
+}
+
+/* Map legend */
+html[data-theme="light"] .map-legend {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(16px);
+}
+
+html[data-theme="light"] .map-legend-title {
+  color: var(--accent-primary);
+}
+
+/* Markdown in light mode */
+html[data-theme="light"] .markdown-body strong {
+  color: var(--accent-primary);
+}
+
+html[data-theme="light"] .markdown-body th {
+  background-color: rgba(14, 165, 233, 0.06);
+}
+
+html[data-theme="light"] .markdown-body th,
+html[data-theme="light"] .markdown-body td {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Scrollbar in light mode */
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(186, 210, 235, 0.8);
+}
+
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 165, 233, 0.4);
+}
+
+/* Brand */
+html[data-theme="light"] .brand-logo {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(14, 165, 233, 0.05));
+  border-color: rgba(14, 165, 233, 0.3);
+  color: var(--accent-primary);
+}
+
+/* Close button */
+html[data-theme="light"] .btn-close {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .btn-close:hover {
+  background: rgba(14, 165, 233, 0.08);
+  color: var(--text-primary);
+}
+
+/* Mobile bottom sheet handle */
+html[data-theme="light"] .bottom-sheet-handle {
+  background: rgba(14, 165, 233, 0.2);
+}
+
+/* Mobile FAB */
+html[data-theme="light"] .mobile-chat-fab {
+  background: var(--accent-primary);
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.4);
+}
+
 
 * {
   box-sizing: border-box;
@@ -89,7 +464,29 @@ html, body {
   z-index: 10;
   box-shadow: -10px 0 30px -10px rgba(0,0,0,0.5);
   background: var(--bg-surface);
+  transition: margin-right 0.4s cubic-bezier(0.32, 0.72, 0, 1), transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.4s;
+  margin-right: 0;
+  transform: translateX(0);
+  overflow: hidden;
 }
+
+/* Theme toggle dock — floats next to the chat toggle button at the bottom right on desktop */
+.theme-toggle-dock {
+  position: absolute;
+  bottom: 24px;
+  right: 496px; /* sidebar (420px) + gap (20px) + chat btn (44px) + gap (12px) */
+  top: auto;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+  transition: right 0.4s cubic-bezier(0.32, 0.72, 0, 1), bottom 0.3s ease, top 0.3s ease;
+}
+
+.theme-toggle-dock.chat-closed {
+  right: 80px; /* gap (24px) + chat btn (44px) + gap (12px) */
+}
+
 
 /* Floating widgets */
 .floating-widget {
@@ -141,48 +538,54 @@ html, body {
 /* Floating Header styles */
 .floating-header {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
-  height: 64px;
-  border-radius: 16px;
-  padding: 0 20px;
+  top: 16px;
+  left: 16px;
+  right: 76px; /* Chừa 60px bên phải cho cụm zoom control của bản đồ */
+  height: 48px;
+  border-radius: 12px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   z-index: 30;
+  transition: left 0.4s cubic-bezier(0.32, 0.72, 0, 1), right 0.4s cubic-bezier(0.32, 0.72, 0, 1), top 0.3s ease;
 }
 
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .brand-logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
   border: 1px solid var(--border-active);
   color: var(--accent-primary);
 }
 
+.brand-logo svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
 .brand-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.01em;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .brand-subtitle {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .btn-sync {
@@ -190,22 +593,23 @@ html, body {
   border: none;
   color: #030712;
   font-family: var(--font-sans);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 30px;
 }
 
 .btn-sync:hover:not(:disabled) {
   background: linear-gradient(135deg, var(--accent-primary-hover), var(--accent-primary));
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 6px 14px rgba(16, 185, 129, 0.25);
 }
 
 .btn-sync:active:not(:disabled) {
@@ -237,15 +641,16 @@ html, body {
 /* Weather Detail Panel */
 .weather-detail-panel {
   position: absolute;
-  top: 100px;
-  left: 20px;
+  top: 80px;
+  left: 16px;
   width: 380px;
-  max-height: calc(100vh - 150px);
+  max-height: calc(100vh - 120px);
   border-radius: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 40;
+  transition: top 0.3s ease, left 0.4s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .weather-detail-header {
@@ -842,6 +1247,12 @@ html, body {
     overflow: hidden;
   }
   
+  .theme-toggle-dock {
+    bottom: auto !important;
+    top: 16px !important;
+    right: 16px !important;
+  }
+  
   .map-viewport {
     position: absolute;
     inset: 0;
@@ -851,7 +1262,7 @@ html, body {
   }
   
   .sidebar-right {
-    width: 100%;
+    width: 100% !important;
     position: absolute;
     bottom: 0;
     height: 65vh;
@@ -863,10 +1274,11 @@ html, body {
     pointer-events: auto;
     display: flex;
     flex-direction: column;
+    margin-right: 0 !important;
   }
   
   .sidebar-right.closed {
-    transform: translateY(100%);
+    transform: translateY(100%) !important;
     opacity: 0;
     pointer-events: none;
   }
@@ -998,5 +1410,57 @@ html, body {
   }
   100% {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* DESKTOP SIDEBAR CLOSED & TOGGLE BUTTON */
+@media (min-width: 769px) {
+  .sidebar-right.closed {
+    margin-right: -420px;
+    transform: translateX(100%);
+    box-shadow: none;
+    pointer-events: none;
+  }
+}
+
+.chat-toggle-btn {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .chat-toggle-btn {
+    display: flex;
+    position: absolute;
+    bottom: 24px;
+    right: 440px; /* sidebar width (420px) + margin (20px) */
+    z-index: 100;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    box-shadow: var(--shadow-premium);
+    cursor: pointer;
+    transition: right 0.4s cubic-bezier(0.32, 0.72, 0, 1), background 0.3s, border-color 0.3s, transform 0.2s, color 0.3s;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  
+  .chat-toggle-btn.chat-closed {
+    right: 24px;
+  }
+  
+  .chat-toggle-btn:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: scale(1.05);
+  }
+  
+  .chat-toggle-btn:active {
+    transform: scale(0.95);
   }
 }

@@ -392,12 +392,13 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
     yield "data: [DONE]\n\n"
 
 
-async def run_local_nlp_chat(message: str, db: AsyncSession):
+async def run_local_nlp_chat(message: str, db: AsyncSession, history: list = None):
     intent = nlp_service.classify_intent(message)
     target_time = nlp_service.extract_time(message)
-    
+
     response_text = ""
-    
+    coords_resolved = False
+
     # Check for exact coordinates in message (e.g. from Get Location button)
     import re
     coord_match = re.search(r"lat:\s*(-?\d+\.?\d*),\s*lon:\s*(-?\d+\.?\d*)", message)
@@ -405,20 +406,45 @@ async def run_local_nlp_chat(message: str, db: AsyncSession):
     if coord_match:
         lat = float(coord_match.group(1))
         lon = float(coord_match.group(2))
-        city_name = "Vị trí của bạn"
+        # Reverse-geocode to get suburb/ward-level name
+        from ..tools.weather_tools import _reverse_geocode
+        city_name = await _reverse_geocode(lat, lon)
         location = "vị trí của tôi"
+        coords_resolved = True
     else:
         location = await nlp_service.extract_location(message, db)
-        if location:
+        # --- Context memory: fall back to history when no location in current message ---
+        if not location and history:
+            for h in reversed(history):
+                if h.get("role") != "user":
+                    continue
+                prev = h.get("content", "")
+                # Check for coords in a previous message
+                prev_coord = re.search(r"lat:\s*(-?\d+\.?\d*),\s*lon:\s*(-?\d+\.?\d*)", prev)
+                if prev_coord:
+                    lat = float(prev_coord.group(1))
+                    lon = float(prev_coord.group(2))
+                    from ..tools.weather_tools import _reverse_geocode
+                    city_name = await _reverse_geocode(lat, lon)
+                    location = "v\u1ecb tr\u00ed c\u1ee7a t\u00f4i"
+                    coords_resolved = True
+                    break
+                # Check for city name in a previous message
+                prev_loc = await nlp_service.extract_location(prev, db)
+                if prev_loc:
+                    location = prev_loc
+                    break
+        if location and not coords_resolved:
             lat, lon, city_name = await nlp_service.get_city_coords(location, db)
-        else:
+        elif not coords_resolved:
             lat, lon, city_name = None, None, None
     
     if location:
-        if lat and lon:
+        if lat is not None and lon is not None:
             if target_time:
                 from ..tools.weather_tools import execute_tool
-                hourly = await execute_tool("get_hourly_forecast", {"city_name": city_name, "target_time": target_time}, db)
+                params = {"lat": lat, "lon": lon, "target_time": target_time} if coords_resolved else {"city_name": city_name, "target_time": target_time}
+                hourly = await execute_tool("get_hourly_forecast", params, db)
                 if "error" in hourly:
                     response_text = f"Xin lỗi, {hourly['error']}"
                 else:
@@ -431,22 +457,60 @@ async def run_local_nlp_chat(message: str, db: AsyncSession):
                     )
             elif intent == "rain" or intent == "forecast":
                 from ..tools.weather_tools import execute_tool
-                forecast = await execute_tool("get_rain_forecast", {"city_name": city_name}, db)
+                params = {"lat": lat, "lon": lon} if coords_resolved else {"city_name": city_name}
+                forecast = await execute_tool("get_rain_forecast", params, db)
                 if "error" in forecast:
                     response_text = f"Xin lỗi, {forecast['error']}"
                 else:
-                    rain_info = forecast.get('first_likely_rain', {})
-                    response_text = (
-                        f"🌧️ **Dự báo mưa cho {city_name}** [MAP:{lat},{lon},10]:\n\n"
-                        f"- ☔ Thời gian mưa gần nhất: {rain_info.get('time', 'Không rõ')}\n"
-                        f"- 🌡️ Nhiệt độ lúc mưa: {rain_info.get('temperature', '?')}°C\n"
-                        f"- 💧 Lượng mưa dự kiến: {rain_info.get('precipitation_mm', '?')} mm\n"
-                        f"- ☁️ Trạng thái: {rain_info.get('condition', '?')}\n\n"
-                        f"*(Dự báo dựa trên Open-Meteo)*"
-                    )
+                    summary    = forecast.get("summary", {})
+                    rain_info  = summary.get("first_likely_rain") or {}
+                    daily      = forecast.get("daily_summary", [])
+                    hourly_all = forecast.get("hourly_forecast", [])
+                    hourly_24h = hourly_all[:24]
+
+                    lines = [f"🌧️ **Dự báo mưa tại {city_name}** [MAP:{lat},{lon},10]\n"]
+
+                    if rain_info:
+                        rain_time = rain_info.get("time", "Không rõ")
+                        rain_prob = rain_info.get("precip_prob_pct", "?")
+                        rain_mm   = rain_info.get("precipitation_mm", "?")
+                        rain_cond = rain_info.get("condition", "?")
+                        lines.append(f"☔ **Mưa gần nhất:** {rain_time} — {rain_prob}% | {rain_mm} mm | {rain_cond}")
+                    else:
+                        lines.append("☀️ Không có mưa đáng kể trong 72h tới.")
+
+                    clear_info = summary.get("first_clear_after_rain")
+                    if clear_info:
+                        lines.append(f"☀️ **Tạnh mưa từ:** {clear_info.get('time', '?')}")
+
+                    if daily:
+                        d = daily[0]
+                        lines.append(
+                            f"\n📅 **Hôm nay:** tổng {d.get('total_rain_mm', 0)} mm "
+                            f"({d.get('rain_hours', 0)}h mưa) — {d.get('condition', '')}"
+                        )
+
+                    rainy_hours = [h for h in hourly_24h if h.get("precipitation_mm", 0) > 0]
+                    if rainy_hours:
+                        lines.append("\n**⏱️ Dự báo theo giờ (24h tới):**")
+                        lines.append("| Giờ | Xác suất | Lượng mưa | Nhiệt độ | Tình trạng |")
+                        lines.append("|-----|----------|-----------|----------|------------|")
+                        for h in rainy_hours:
+                            hour_str = h.get("hour", h.get("time", "")[-5:])
+                            prob     = h.get("precip_prob_pct", 0)
+                            mm       = h.get("precipitation_mm", 0)
+                            temp     = h.get("temperature", "?")
+                            cond     = h.get("condition", "")
+                            icon     = "🌧️" if prob >= 60 else ("🌦️" if prob >= 30 else "🌤️")
+                            lines.append(f"| {hour_str} | {icon} {prob}% | {mm} mm | {temp}°C | {cond} |")
+                    else:
+                        lines.append("\n✅ Không có giờ nào có mưa trong 24h tới.")
+
+                    response_text = "\n".join(lines)
             elif intent == "sun":
                 from ..tools.weather_tools import execute_tool
-                sun = await execute_tool("get_sun_times", {"city_name": city_name}, db)
+                params = {"lat": lat, "lon": lon} if coords_resolved else {"city_name": city_name}
+                sun = await execute_tool("get_sun_times", params, db)
                 if "error" in sun:
                     response_text = f"Xin lỗi, {sun['error']}"
                 else:
@@ -462,8 +526,10 @@ async def run_local_nlp_chat(message: str, db: AsyncSession):
                     response_text = f"Xin lỗi, {weather['error']}"
                 else:
                     def fmt(v): return round(v, 1) if isinstance(v, float) else v
+                    # Use place_name from tool (suburb/ward level) if available
+                    display_name = weather.get("place_name") or city_name
                     response_text = (
-                        f"🌍 **Thời tiết hiện tại tại {city_name}** [MAP:{lat},{lon},10]:\n\n"
+                        f"🌍 **Thời tiết hiện tại tại {display_name}** [MAP:{lat},{lon},10]:\n\n"
                         f"- 🌡️ Nhiệt độ: {fmt(weather.get('temperature', '?'))}°C (cảm giác {fmt(weather.get('feels_like', '?'))}°C)\n"
                         f"- 💧 Độ ẩm: {fmt(weather.get('humidity', '?'))}%\n"
                         f"- 💨 Gió: {fmt(weather.get('wind_speed', '?'))} m/s\n"
@@ -493,11 +559,11 @@ async def chat_stream(
     model: str = Query("local"),
     db: AsyncSession = Depends(get_db)
 ):
+    history = json.loads(history_json) if history_json else []
     if model == "gemini":
-        history = json.loads(history_json) if history_json else []
         return StreamingResponse(run_gemini_chat(message, history, db), media_type="text/event-stream")
     else:
-        return StreamingResponse(run_local_nlp_chat(message, db), media_type="text/event-stream")
+        return StreamingResponse(run_local_nlp_chat(message, db, history), media_type="text/event-stream")
 
 @router.post("/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
