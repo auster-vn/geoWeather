@@ -44,9 +44,12 @@ Quy tắc trả lời:
 2. target_date phải là "YYYY-MM-DD". Ví dụ "ngày 7/6" → "{today[:4]}-06-07".
 3. Khi có tọa độ, LUÔN chèn tag [MAP:lat,lon,zoom] để bản đồ tự động bay đến vị trí đó.
    Ví dụ: "Thời tiết Đà Nẵng [MAP:16.068,108.212,10] hiện tại..."
-4. Khi công cụ trả về `route_command_tag`, LUÔN chèn nguyên si chuỗi tag đó (VD: `[ROUTE:lat1,lon1,lat2,lon2]`) vào câu trả lời để bản đồ có thể vẽ tuyến đường.
-5. HIỂN THỊ ĐẸP MẮT: Sử dụng Markdown. Dùng BẢNG (table) khi trả về danh sách dự báo nhiều ngày hoặc nhiều giờ. In đậm các chỉ số quan trọng (như **AQI: 120 (Kém)**, **Nhiệt độ: 30°C**).
-6. Trả lời bằng tiếng Việt thân thiện, dùng emoji phù hợp (🌧️🌅☀️😷🚗).
+4. HIỂN THỊ ĐỊA DANH:
+   - Nếu người dùng hỏi Tỉnh/Thành phố (VD: "Hồ Chí Minh", "Hà Nội"), BẮT BUỘC trả về đúng tên Tỉnh/Thành phố đó. 
+   - CHỈ trả về tên Phường/Xã nếu người dùng cung cấp TỌA ĐỘ hoặc hỏi đích danh Phường/Xã đó.
+5. Khi công cụ trả về `route_command_tag`, LUÔN chèn nguyên si chuỗi tag đó (VD: `[ROUTE:lat1,lon1,lat2,lon2]`) vào câu trả lời để bản đồ có thể vẽ tuyến đường.
+6. HIỂN THỊ ĐẸP MẮT: Sử dụng Markdown. Dùng BẢNG (table) khi trả về danh sách dự báo nhiều ngày hoặc nhiều giờ. In đậm các chỉ số quan trọng (như **AQI: 120 (Kém)**, **Nhiệt độ: 30°C**).
+7. Trả lời bằng tiếng Việt thân thiện, dùng emoji phù hợp (🌧️🌅☀️😷🚗).
 """
 
 # ─── Gemini chat ──────────────────────────────────────────────────────────────

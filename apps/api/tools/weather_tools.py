@@ -178,9 +178,12 @@ def weather_tool_definitions() -> List[Dict[str, Any]]:
                 "properties": {
                     "lat": {"type": "number", "description": "Latitude coordinate"},
                     "lon": {"type": "number", "description": "Longitude coordinate"},
-                    "location_name": {"type": "string", "description": "Optional. The original city or location name the user asked for (e.g., 'Hồ Chí Minh'). If provided, this name will be used instead of reverse-geocoding."}
+                    "location_name": {
+                        "type": "string", 
+                        "description": "The name of the location the user asked for (e.g., 'Hồ Chí Minh', 'Hà Nội'). If the user only provided raw coordinates without a name, you MUST pass an empty string ''."
+                    }
                 },
-                "required": ["lat", "lon"]
+                "required": ["lat", "lon", "location_name"]
             }
         },
         {
