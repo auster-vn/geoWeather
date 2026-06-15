@@ -321,9 +321,9 @@ async def _resolve_city(city_name: str, db: AsyncSession) -> Optional[Dict[str, 
     normalized_name = remove_diacritics(city_name).strip().lower()
     
     # Map common aliases
-    if normalized_name in ["sai gon", "sg", "hcm", "hcmc"]:
+    if normalized_name in ["sai gon", "sg", "hcm", "hcmc", "ho chi minh"]:
         city_name = "Ho Chi Minh"
-    elif normalized_name == "hn":
+    elif normalized_name in ["hn", "ha noi"]:
         city_name = "Hanoi"
 
     q = text("""
