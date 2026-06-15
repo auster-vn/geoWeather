@@ -107,7 +107,7 @@ async def detect_anomaly(conn_ts: asyncpg.Connection, location_id: int, temp: fl
         logger.warning(f"Error checking anomaly for location {location_id}: {e}")
         return False, 0.0, 0.0, 0.0
 
-async def process_location_weather(
+async def _process_location_weather_with_conns(
     city: dict, 
     weather_data: dict, 
     conn_pg: asyncpg.Connection, 
@@ -252,25 +252,46 @@ async def process_location_weather(
         }
         await redis_client.publish(f"weather:h3:{h3_r4}", json.dumps(redis_msg))
 
+async def process_location_weather(
+    city: dict, 
+    weather_data: dict, 
+    pool_pg: asyncpg.Pool, 
+    pool_ts: asyncpg.Pool, 
+    redis_client: aioredis.Redis
+):
+    """Acquires connections from the pools and processes the weather data."""
+    async with pool_pg.acquire() as conn_pg:
+        if pool_ts != pool_pg:
+            async with pool_ts.acquire() as conn_ts:
+                await _process_location_weather_with_conns(
+                    city, weather_data, conn_pg, conn_ts, redis_client
+                )
+        else:
+            await _process_location_weather_with_conns(
+                city, weather_data, conn_pg, conn_pg, redis_client
+            )
+
 async def run_ingestion():
     """Main function to run the batch ingestion cycle."""
     logger.info("Initializing direct database and cache connections...")
     pg_dsn = get_asyncpg_dsn(DATABASE_URL)
     ts_dsn = get_asyncpg_dsn(TIMESCALE_URL)
     
-    conn_pg = await asyncpg.connect(pg_dsn)
-    conn_ts = await asyncpg.connect(ts_dsn) if TIMESCALE_URL != DATABASE_URL else conn_pg
+    # Use create_pool instead of connect to support concurrent queries
+    pool_pg = await asyncpg.create_pool(pg_dsn, min_size=5, max_size=20, statement_cache_size=0)
+    pool_ts = await asyncpg.create_pool(ts_dsn, min_size=5, max_size=20, statement_cache_size=0) if TIMESCALE_URL != DATABASE_URL else pool_pg
     redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
     
     try:
         # Load active cities from DB (population > 100k to restrict API limits)
         logger.info("Loading cities list from PostgreSQL...")
-        rows = await conn_pg.fetch("""
-            SELECT geoname_id, city_name, country_code, ST_Y(geom) as lat, ST_X(geom) as lon 
-            FROM cities 
-            WHERE population > 100000
-            ORDER BY population DESC;
-        """)
+        async with pool_pg.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT geoname_id, city_name, country_code, ST_Y(geom) as lat, ST_X(geom) as lon 
+                FROM cities 
+                WHERE population > 100000
+                ORDER BY population DESC;
+            """)
         
         cities = [dict(r) for r in rows]
         logger.info(f"Loaded {len(cities)} cities to poll.")
@@ -288,24 +309,26 @@ async def run_ingestion():
                 logger.info(f"Polling batch {idx+1}/{len(batches)} containing {len(batch)} cities...")
                 results = await fetch_batch_weather(batch, http_client)
                 
-                # Update database for all cities in this batch concurrently
+                # Update database for all cities in this batch concurrently using the connection pools
                 tasks = []
                 for city_info, weather_info in zip(batch, results):
                     tasks.append(
                         process_location_weather(
-                            city_info, weather_info, conn_pg, conn_ts, redis_client
+                            city_info, weather_info, pool_pg, pool_ts, redis_client
                         )
                     )
                 await asyncio.gather(*tasks)
+                # Sleep briefly between batches to prevent hitting Open-Meteo 429 Rate Limits
+                await asyncio.sleep(0.5)
                 
         logger.info("Direct weather sync cycle completed successfully.")
         
     except Exception as e:
         logger.error(f"Error during direct weather ingestion: {e}", exc_info=True)
     finally:
-        await conn_pg.close()
+        await pool_pg.close()
         if TIMESCALE_URL != DATABASE_URL:
-            await conn_ts.close()
+            await pool_ts.close()
         await redis_client.close()
 
 if __name__ == "__main__":
