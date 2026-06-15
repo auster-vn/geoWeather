@@ -524,7 +524,7 @@ async def run_local_nlp_chat(message: str, db: AsyncSession, history: list = Non
                     )
             else:
                 from ..tools.weather_tools import execute_tool
-                weather = await execute_tool("get_weather_by_coords", {"lat": lat, "lon": lon, "location_name": city_name if coords_resolved else ""}, db)
+                weather = await execute_tool("get_weather_by_coords", {"lat": lat, "lon": lon, "location_name": city_name}, db)
                 if "error" in weather:
                     response_text = f"Xin lỗi, {weather['error']}"
                 else:
