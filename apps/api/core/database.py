@@ -14,7 +14,11 @@ postgres_engine = create_async_engine(
     pool_size=2,
     max_overflow=2,
     pool_pre_ping=True,
-    pool_recycle=1800
+    pool_recycle=1800,
+    connect_args={
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0
+    }
 )
 
 # Engine for TimescaleDB
@@ -28,7 +32,11 @@ else:
         pool_size=2,
         max_overflow=2,
         pool_pre_ping=True,
-        pool_recycle=1800
+        pool_recycle=1800,
+        connect_args={
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0
+        }
     )
 
 # Session makers
