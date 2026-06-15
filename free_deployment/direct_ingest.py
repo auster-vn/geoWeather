@@ -12,6 +12,8 @@ import redis.asyncio as aioredis
 
 logger = logging.getLogger("direct_ingest")
 
+db_semaphore = asyncio.Semaphore(10)
+
 # Read configurations from environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:geoweather_local@localhost:5432/geoweather")
 TIMESCALE_URL = os.environ.get("TIMESCALE_URL", os.environ.get("DATABASE_URL"))  # Default to DATABASE_URL if separate Timescale DB is not used
@@ -253,23 +255,24 @@ async def _process_location_weather_with_conns(
         await redis_client.publish(f"weather:h3:{h3_r4}", json.dumps(redis_msg))
 
 async def process_location_weather(
-    city: dict, 
-    weather_data: dict, 
-    pool_pg: asyncpg.Pool, 
-    pool_ts: asyncpg.Pool, 
+    city: dict,
+    weather_data: dict,
+    pool_pg: asyncpg.Pool,
+    pool_ts: asyncpg.Pool,
     redis_client: aioredis.Redis
 ):
     """Acquires connections from the pools and processes the weather data."""
-    async with pool_pg.acquire() as conn_pg:
-        if pool_ts != pool_pg:
-            async with pool_ts.acquire() as conn_ts:
+    async with db_semaphore:
+        async with pool_pg.acquire() as conn_pg:
+            if pool_ts != pool_pg:
+                async with pool_ts.acquire() as conn_ts:
+                    await _process_location_weather_with_conns(
+                        city, weather_data, conn_pg, conn_ts, redis_client
+                    )
+            else:
                 await _process_location_weather_with_conns(
-                    city, weather_data, conn_pg, conn_ts, redis_client
+                    city, weather_data, conn_pg, conn_pg, redis_client
                 )
-        else:
-            await _process_location_weather_with_conns(
-                city, weather_data, conn_pg, conn_pg, redis_client
-            )
 
 async def run_ingestion():
     """Main function to run the batch ingestion cycle."""
@@ -278,8 +281,9 @@ async def run_ingestion():
     ts_dsn = get_asyncpg_dsn(TIMESCALE_URL)
     
     # Use create_pool instead of connect to support concurrent queries
-    pool_pg = await asyncpg.create_pool(pg_dsn, min_size=5, max_size=20, statement_cache_size=0)
-    pool_ts = await asyncpg.create_pool(ts_dsn, min_size=5, max_size=20, statement_cache_size=0) if TIMESCALE_URL != DATABASE_URL else pool_pg
+    # Reduce pool size to avoid Supabase connection limits (15 max)
+    pool_pg = await asyncpg.create_pool(pg_dsn, min_size=1, max_size=4, statement_cache_size=0)
+    pool_ts = await asyncpg.create_pool(ts_dsn, min_size=1, max_size=4, statement_cache_size=0) if TIMESCALE_URL != DATABASE_URL else pool_pg
     redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
     
     try:
@@ -289,8 +293,8 @@ async def run_ingestion():
             rows = await conn.fetch("""
                 SELECT geoname_id, city_name, country_code, ST_Y(geom) as lat, ST_X(geom) as lon 
                 FROM cities 
-                WHERE population > 100000
-                ORDER BY population DESC;
+                WHERE population > 100000 OR country_code = 'VN'
+                ORDER BY CASE WHEN country_code = 'VN' THEN 1 ELSE 2 END, population DESC;
             """)
         
         cities = [dict(r) for r in rows]
