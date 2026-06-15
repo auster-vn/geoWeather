@@ -69,7 +69,7 @@ Vercel là dịch vụ lưu trữ tối ưu nhất cho Next.js Monorepo.
    - **Output Directory**: `apps/web/.next`
 4. Thiết lập **Environment Variables**:
    - `NEXT_PUBLIC_API_URL`: *<URL dịch vụ Backend API đã deploy ở Bước 3, ví dụ: https://geoweather-api.onrender.com>*
-   - `NEXT_PUBLIC_MAPBOX_TOKEN`: *<Mapbox Token của bạn để hiển thị bản đồ>*
+   - `NEXT_PUBLIC_MAPBOX_TOKEN`: *(Không bắt buộc / Để trống - Dự án sử dụng bản đồ nền miễn phí từ CartoDB nên không cần token này).*
 5. Nhấp **Deploy** và chờ quá trình build hoàn tất.
 
 ---
