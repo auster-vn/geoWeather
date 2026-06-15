@@ -11,8 +11,8 @@ postgres_engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
     future=True,
-    pool_size=20,
-    max_overflow=50,
+    pool_size=2,
+    max_overflow=2,
     pool_pre_ping=True,
     pool_recycle=1800
 )
@@ -22,8 +22,8 @@ timescale_engine = create_async_engine(
     settings.TIMESCALE_URL,
     echo=False,
     future=True,
-    pool_size=20,
-    max_overflow=50,
+    pool_size=2,
+    max_overflow=2,
     pool_pre_ping=True,
     pool_recycle=1800
 )
