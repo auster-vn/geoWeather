@@ -104,6 +104,19 @@ export function ChatPanel() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Listen for suggested prompt clicks from ChatOverlay
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const prompt = (e as CustomEvent<string>).detail
+      if (prompt && !isLoading) {
+        setInput('')
+        sendMessage(prompt)
+      }
+    }
+    window.addEventListener('geoweather:chat-prompt', handler)
+    return () => window.removeEventListener('geoweather:chat-prompt', handler)
+  }, [isLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleLocationClick = () => {
     if (!navigator.geolocation) {
       alert("Trình duyệt của bạn không hỗ trợ định vị.")

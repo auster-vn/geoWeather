@@ -252,7 +252,10 @@ async def _process_location_weather_with_conns(
             "avg_humidity": round(float(agg["avg_hum"]), 1),
             "observation_count": int(agg["obs_count"])
         }
-        await redis_client.publish(f"weather:h3:{h3_r4}", json.dumps(redis_msg))
+        try:
+            await redis_client.publish(f"weather:h3:{h3_r4}", json.dumps(redis_msg))
+        except Exception as e:
+            logger.debug(f"Could not publish to Redis: {e}")
 
 async def process_location_weather(
     city: dict,

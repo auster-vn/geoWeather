@@ -6,10 +6,25 @@ import { ChatPanel } from '../components/panels/ChatPanel'
 import { WeatherDetail } from '../components/panels/WeatherDetail'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { useWeatherStore, ActiveLayerType } from '../store/weather'
-import { Thermometer, Flame, Hexagon, Globe, RefreshCw, MessageCircle, ChevronRight } from 'lucide-react'
+import { useIsMobile } from '../hooks/useIsMobile'
+
+// Mobile components
+import { BottomSheet } from '../components/mobile/BottomSheet'
+import { BottomNavigation } from '../components/mobile/BottomNavigation'
+import { FloatingActions } from '../components/mobile/FloatingActions'
+import { LayerSelector } from '../components/mobile/LayerSelector'
+import { SearchBar } from '../components/mobile/SearchBar'
+import { ChatOverlay } from '../components/mobile/ChatOverlay'
+
+import {
+  Thermometer, Flame, Hexagon, Globe,
+  RefreshCw, MessageCircle, ChevronRight,
+} from 'lucide-react'
 
 export default function Home() {
   const { activeLayer, setActiveLayer } = useWeatherStore()
+  const isMobile = useIsMobile()
+
   const [isSyncing, setIsSyncing] = useState(false)
   const [networkError, setNetworkError] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
@@ -18,7 +33,7 @@ export default function Home() {
 
   // Open chat by default on desktop
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth > 768) {
+    if (typeof window !== 'undefined' && window.innerWidth > 1024) {
       setIsChatOpen(true)
     }
   }, [])
@@ -89,6 +104,40 @@ export default function Home() {
     }
   }
 
+  // ─── MOBILE LAYOUT ──────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className="app-container mobile-layout">
+        {/* Fullscreen map */}
+        <div className="map-viewport">
+          {themeLoaded && <WeatherMap isDark={isDark} />}
+        </div>
+
+        {/* Mobile Search Bar (top) */}
+        <div className="mobile-search-zone">
+          <SearchBar />
+          <ThemeToggle isDark={isDark} onToggle={handleThemeToggle} />
+        </div>
+
+        {/* Floating Action Buttons (right side) */}
+        <FloatingActions />
+
+        {/* Layer Selector Drawer */}
+        <LayerSelector />
+
+        {/* AI Chat Overlay */}
+        <ChatOverlay />
+
+        {/* Bottom Sheet (weather detail) */}
+        <BottomSheet />
+
+        {/* Bottom Navigation */}
+        <BottomNavigation />
+      </div>
+    )
+  }
+
+  // ─── DESKTOP / LAPTOP LAYOUT ─────────────────────────────────────────────────
   return (
     <div className="app-container">
       {/* Main Map Viewport */}
@@ -174,13 +223,6 @@ export default function Home() {
           <ChatPanel />
         </div>
       </div>
-
-      {/* Mobile FAB to open chat */}
-      {!isChatOpen && (
-        <button className="mobile-chat-fab" onClick={() => setIsChatOpen(true)}>
-          <MessageCircle className="w-6 h-6" />
-        </button>
-      )}
     </div>
   )
 }
