@@ -2455,3 +2455,43 @@ html[data-theme="light"] .mobile-air-card {
   font-weight: 700;
   color: var(--text-primary);
 }
+
+/* ─── FORCE DESKTOP SIDEBAR & CHAT FULL HEIGHT AND NO GAPS ──────────────────── */
+@media (min-width: 769px) {
+  .app-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+    width: 100vw !important;
+  }
+  .sidebar-right {
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+  }
+  .chat-container {
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+  .chat-header {
+    border-radius: 0 !important;
+    margin: 0 !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  .chat-input-form {
+    border-radius: 0 !important;
+    margin: 0 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+}
+

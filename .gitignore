@@ -19,6 +19,7 @@ node_modules/
 .pnp.js
 coverage/
 .next/
+.next-dev/
 out/
 build/
 dist/
