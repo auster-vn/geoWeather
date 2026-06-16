@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useWeatherStore } from '../../store/weather'
-import { Search, MapPin, X, Clock } from 'lucide-react'
+import { Search, MapPin, X, Clock, Compass } from 'lucide-react'
 
 const RECENT_KEY = 'geoweather-recent-searches'
 const MAX_RECENT = 5
@@ -13,6 +13,14 @@ interface SearchResult {
   name: string
   country?: string
 }
+
+const POPULAR_LOCATIONS: SearchResult[] = [
+  { name: 'Hà Nội', lat: 21.0285, lon: 105.8542, country: 'VN' },
+  { name: 'TP. Hồ Chí Minh', lat: 10.823, lon: 106.6297, country: 'VN' },
+  { name: 'Đà Nẵng', lat: 16.0544, lon: 108.2022, country: 'VN' },
+  { name: 'Nha Trang', lat: 12.2388, lon: 109.1967, country: 'VN' },
+  { name: 'Đà Lạt', lat: 11.9404, lon: 108.4583, country: 'VN' }
+]
 
 export function SearchBar() {
   const [query, setQuery] = useState('')
@@ -175,7 +183,7 @@ export function SearchBar() {
     }
   }
 
-  const showDropdown = focused && (results.length > 0 || recents.length > 0 || loading)
+  const showDropdown = focused && (results.length > 0 || recents.length > 0 || query === '' || loading)
 
   return (
     <div className="mobile-search-container">
@@ -222,7 +230,7 @@ export function SearchBar() {
             </div>
           )}
 
-          {!loading && results.length > 0 && (
+          {!loading && query && results.length > 0 && (
             <>
               <p className="mobile-search-group-label">Kết quả</p>
               {results.map((r, i) => (
@@ -234,12 +242,30 @@ export function SearchBar() {
             </>
           )}
 
-          {!loading && results.length === 0 && recents.length > 0 && (
+          {!loading && query && results.length === 0 && (
+            <div style={{ padding: '12px', textAlign: 'center', fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Không tìm thấy địa điểm. Nhấn Enter để hỏi AI.
+            </div>
+          )}
+
+          {!loading && !query && (
             <>
-              <p className="mobile-search-group-label">Tìm gần đây</p>
-              {recents.map((r, i) => (
+              {recents.length > 0 && (
+                <>
+                  <p className="mobile-search-group-label">Tìm gần đây</p>
+                  {recents.map((r, i) => (
+                    <button key={i} className="mobile-search-result" onMouseDown={() => handleSelect(r)}>
+                      <Clock className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                      <span>{r.name}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              <p className="mobile-search-group-label" style={{ marginTop: recents.length > 0 ? '12px' : '0' }}>Địa điểm gợi ý</p>
+              {POPULAR_LOCATIONS.map((r, i) => (
                 <button key={i} className="mobile-search-result" onMouseDown={() => handleSelect(r)}>
-                  <Clock className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                  <Compass className="w-3.5 h-3.5" style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
                   <span>{r.name}</span>
                 </button>
               ))}
