@@ -39,26 +39,7 @@ export function WeatherMap({ isDark = false }: { isDark?: boolean }) {
   const [loading, setLoading] = useState(true)
   const [errorLog, setErrorLog] = useState<string | null>(null)
 
-  const { activeLayer, selectedLocation, setSelectedLocation, mapViewport, setMapViewport, isChatOverlayOpen } = useWeatherStore()
-
-  // Trigger map resize when sidebar opens/closes to fill container smoothly
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
-
-    let count = 0
-    const intervalId = setInterval(() => {
-      if (mapRef.current) {
-        mapRef.current.resize()
-      }
-      count++
-      if (count > 30) {
-        clearInterval(intervalId)
-      }
-    }, 15) // run for 450ms to cover the 400ms transition
-
-    return () => clearInterval(intervalId)
-  }, [isChatOverlayOpen])
+  const { activeLayer, selectedLocation, setSelectedLocation, mapViewport, setMapViewport } = useWeatherStore()
 
   // Fetch weather points from FastAPI
   useEffect(() => {
@@ -120,9 +101,11 @@ export function WeatherMap({ isDark = false }: { isDark?: boolean }) {
     const styleUrl = isDark ? DARK_STYLE : LIGHT_STYLE
     
     let map: maplibregl.Map;
+    const container = mapContainerRef.current;
+    
     try {
       map = new maplibregl.Map({
-        container: mapContainerRef.current,
+        container: container,
         style: styleUrl,
         center: [mapViewport.longitude, mapViewport.latitude],
         zoom: mapViewport.zoom,
@@ -153,6 +136,12 @@ export function WeatherMap({ isDark = false }: { isDark?: boolean }) {
       return
     }
 
+    // Setup ResizeObserver to dynamically resize map canvas on container dimensions changes
+    const resizeObserver = new ResizeObserver(() => {
+      map.resize()
+    })
+    resizeObserver.observe(container)
+
     // Track map movements and update state
     map.on('moveend', () => {
       const center = map.getCenter()
@@ -165,6 +154,7 @@ export function WeatherMap({ isDark = false }: { isDark?: boolean }) {
     })
 
     return () => {
+      resizeObserver.disconnect()
       map.remove()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
