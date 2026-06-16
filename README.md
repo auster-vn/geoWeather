@@ -1,15 +1,14 @@
 <div align="center">
 
-  <table border="0" cellspacing="0" cellpadding="0">
-    <tr>
-      <td align="center" valign="top" width="68%">
-        <img src="images/screenshot_web.png" alt="GeoWeather Web Dashboard" width="100%">
-      </td>
-      <td align="center" valign="top" width="32%">
-        <img src="images/screenshot_mobile.jpg" alt="GeoWeather Mobile Dashboard" width="100%">
-      </td>
-    </tr>
-  </table>
+<img src="images/screenshot_web.png" alt="GeoWeather Web Dashboard" width="100%">
+
+<br/>
+<br/>
+
+<img src="images/screenshot_mobile.jpg" alt="GeoWeather Mobile Dashboard" width="350">
+
+<br/>
+<br/>
 
 <h1>🌏 GeoWeather</h1>
 
