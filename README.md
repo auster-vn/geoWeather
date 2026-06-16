@@ -11,6 +11,7 @@
 <br/>
 
 <h1>🌏 GeoWeather</h1>
+![Top Languages](https://github-readme-stats.vercel.app/api/top-langs/?username=auster-vn&repo=geoWeather&layout=compact&theme=tokyonight)
 
 <p><strong>AI-powered real-time geospatial weather platform with hexagonal spatial indexing, NLP chat assistant, and live heatmap visualization</strong></p>
 
