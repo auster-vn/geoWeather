@@ -2,13 +2,39 @@
 
 import { CloudRain, Droplets } from 'lucide-react'
 
-const WMO_ICON: Record<number, string> = {
-  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
-  45: '🌫️', 48: '🌫️',
-  51: '🌦️', 53: '🌧️', 55: '🌧️',
-  61: '🌧️', 63: '🌧️', 65: '🌧️',
-  71: '❄️', 73: '❄️', 75: '❄️',
-  95: '⛈️', 96: '⛈️', 99: '⛈️',
+const getWeatherIcon = (code: number, timeStr?: string, rainProb: number = 0) => {
+  let activeCode = code
+  // If rain probability is high (>= 50%), force a rain icon if it's currently clear or cloudy
+  if (rainProb >= 50 && [0, 1, 2, 3].includes(code)) {
+    activeCode = 61 // WMO 61 is moderate rain
+  }
+
+  let isNight = false
+  if (timeStr) {
+    // timeStr format: "2026-06-16T14:00"
+    try {
+      const hour = parseInt(timeStr.slice(11, 13), 10)
+      if (!isNaN(hour)) {
+        isNight = hour >= 18 || hour < 6
+      }
+    } catch {}
+  }
+
+  if (isNight) {
+    if (activeCode === 0) return '🌙' // Night Clear
+    if (activeCode === 1 || activeCode === 2) return '☁️' // Night Partly Cloudy
+  }
+
+  const WMO_ICON: Record<number, string> = {
+    0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+    45: '🌫️', 48: '🌫️',
+    51: '🌦️', 53: '🌧️', 55: '🌧️',
+    61: '🌧️', 63: '🌧️', 65: '🌧️',
+    71: '❄️', 73: '❄️', 75: '❄️',
+    95: '⛈️', 96: '⛈️', 99: '⛈️',
+  }
+
+  return WMO_ICON[activeCode] ?? (isNight ? '🌙' : '☀️')
 }
 
 const getDayLabel = (dateStr: string, idx: number) => {
@@ -46,13 +72,13 @@ export function ForecastCards({ forecast }: ForecastCardsProps) {
           </h4>
           <div className="hourly-scroll">
             {hourly.time.slice(0, 24).map((time: string, i: number) => {
-              const code = hourly.weathercode?.[i] ?? 0
+              const code = hourly.weather_code?.[i] ?? hourly.weathercode?.[i] ?? 0
               const temp = hourly.temperature_2m?.[i]
               const rain = hourly.precipitation_probability?.[i] ?? 0
               return (
                 <div key={i} className="hourly-card">
                   <span className="hourly-time">{time.slice(11, 16)}</span>
-                  <span className="hourly-icon">{WMO_ICON[code] ?? '🌤️'}</span>
+                  <span className="hourly-icon">{getWeatherIcon(code, time, rain)}</span>
                   <span className="hourly-temp">{temp !== undefined ? `${Math.round(temp)}°` : '--'}</span>
                   {rain > 0 && (
                     <div className="hourly-rain">
@@ -75,14 +101,14 @@ export function ForecastCards({ forecast }: ForecastCardsProps) {
           </h4>
           <div className="daily-list">
             {daily.time?.map((dateStr: string, i: number) => {
-              const code = daily.weathercode?.[i] ?? 0
+              const code = daily.weather_code?.[i] ?? daily.weathercode?.[i] ?? 0
               const minT = daily.temperature_2m_min?.[i]
               const maxT = daily.temperature_2m_max?.[i]
               const rain = daily.precipitation_probability_max?.[i] ?? 0
               return (
                 <div key={i} className="daily-card">
                   <div className="daily-day">{getDayLabel(dateStr, i)}</div>
-                  <span className="daily-icon">{WMO_ICON[code] ?? '🌤️'}</span>
+                  <span className="daily-icon">{getWeatherIcon(code, undefined, rain)}</span>
                   <div className="daily-temp-range">
                     <span className="daily-max">{maxT !== undefined ? `${Math.round(maxT)}°` : '--'}</span>
                     <span className="daily-min">{minT !== undefined ? `${Math.round(minT)}°` : '--'}</span>
