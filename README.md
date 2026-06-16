@@ -11,9 +11,11 @@
 <br/>
 
 <h1>🌏 GeoWeather</h1>
-![Top Languages](https://github-readme-stats.vercel.app/api/top-langs/?username=auster-vn&repo=geoWeather&layout=compact&theme=tokyonight)
-
 <p><strong>AI-powered real-time geospatial weather platform with hexagonal spatial indexing, NLP chat assistant, and live heatmap visualization</strong></p>
+
+<p align="center">
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=auster-vn&layout=compact&theme=tokyonight" height="150"/>
+</p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://github.com/auster-vn/geoWeather/blob/main/LICENSE.txt)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
