@@ -2466,7 +2466,9 @@ html[data-theme="light"] .mobile-air-card {
   }
   .sidebar-right {
     height: 100% !important;
-    margin: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    margin-left: 0 !important;
     padding: 0 !important;
     border-radius: 0 !important;
     border: none !important;
