@@ -2052,7 +2052,7 @@ html[data-theme="light"] .fab-label {
   transform: translateX(0);
 }
 
-.layer-selector-backdrop, .chat-overlay-backdrop {
+.layer-selector-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
@@ -2060,6 +2060,23 @@ html[data-theme="light"] .fab-label {
   -webkit-backdrop-filter: blur(4px);
   z-index: 1020;
   animation: fade-in 0.25s ease-out;
+}
+
+.chat-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1020;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.chat-overlay-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 @keyframes fade-in {
@@ -2177,11 +2194,15 @@ html[data-theme="light"] .layer-selector-icon {
   display: flex;
   flex-direction: column;
   transform: translateY(100%);
-  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), visibility 0.4s;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .chat-overlay-panel.open {
   transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .chat-overlay-header {
