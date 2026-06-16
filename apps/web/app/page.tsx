@@ -217,10 +217,7 @@ export default function Home() {
 
       {/* Chat Sidebar (Right side) */}
       <div className={`sidebar-right ${!isChatOverlayOpen ? 'closed' : ''}`}>
-        <div style={{ width: '420px', height: '100%', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-          <div className="bottom-sheet-handle md:hidden" />
-          <ChatPanel />
-        </div>
+        <ChatPanel />
       </div>
     </div>
   )
