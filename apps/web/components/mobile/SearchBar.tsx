@@ -73,8 +73,19 @@ export function SearchBar() {
     setResults([])
     setFocused(false)
     inputRef.current?.blur()
-    setSheetState('full')
-    setActiveBottomNav('analytics')
+    
+    // Open AI Chat
+    setChatOverlayOpen(true)
+    setActiveBottomNav('ai')
+    
+    // Dispatch query to AI Chat
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent('geoweather:chat-prompt', {
+          detail: `Thời tiết tại ${result.name}`
+        })
+      )
+    }, 300)
   }
 
   const handleGPS = () => {
@@ -84,6 +95,58 @@ export function SearchBar() {
       setSheetState('full')
       setActiveBottomNav('analytics')
     })
+  }
+
+  const triggerSearchOrAI = async () => {
+    if (!query.trim()) return
+
+    setFocused(false)
+    inputRef.current?.blur()
+
+    // 1. If we have results loaded, use the first result
+    if (results.length > 0) {
+      handleSelect(results[0])
+      return
+    }
+
+    // 2. Otherwise, fetch immediately
+    setLoading(true)
+    try {
+      const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const res = await fetch(`${apiHost}/api/v1/location/search?q=${encodeURIComponent(query)}&limit=1`)
+      if (res.ok) {
+        const data = await res.json()
+        const searchResults = Array.isArray(data) ? data : data.results ?? []
+        if (searchResults.length > 0) {
+          handleSelect(searchResults[0])
+          setQuery('')
+          return
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+
+    // 3. Fallback: Send the raw query directly to local AI
+    setChatOverlayOpen(true)
+    setActiveBottomNav('ai')
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent('geoweather:chat-prompt', {
+          detail: `Thời tiết tại ${query}`
+        })
+      )
+    }, 300)
+    setQuery('')
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      triggerSearchOrAI()
+    }
   }
 
   const showDropdown = focused && (results.length > 0 || recents.length > 0 || loading)
@@ -101,6 +164,7 @@ export function SearchBar() {
           onChange={handleChange}
           onFocus={() => setFocused(true)}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
+          onKeyDown={handleKeyDown}
           placeholder="Tìm địa điểm..."
           autoComplete="off"
         />

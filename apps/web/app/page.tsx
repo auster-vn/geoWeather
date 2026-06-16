@@ -22,21 +22,20 @@ import {
 } from 'lucide-react'
 
 export default function Home() {
-  const { activeLayer, setActiveLayer } = useWeatherStore()
+  const { activeLayer, setActiveLayer, isChatOverlayOpen, setChatOverlayOpen } = useWeatherStore()
   const isMobile = useIsMobile()
 
   const [isSyncing, setIsSyncing] = useState(false)
   const [networkError, setNetworkError] = useState(false)
-  const [isChatOpen, setIsChatOpen] = useState(false)
   const [isDark, setIsDark] = useState(false)
   const [themeLoaded, setThemeLoaded] = useState(false)
 
   // Open chat by default on desktop
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth > 1024) {
-      setIsChatOpen(true)
+      setChatOverlayOpen(true)
     }
-  }, [])
+  }, [setChatOverlayOpen])
 
   // Persist and apply theme
   useEffect(() => {
@@ -198,26 +197,26 @@ export default function Home() {
 
       {/* Mobile Backdrop for Chat */}
       <div
-        className={`mobile-backdrop ${!isChatOpen ? 'hidden' : ''}`}
-        onClick={() => setIsChatOpen(false)}
+        className={`mobile-backdrop ${!isChatOverlayOpen ? 'hidden' : ''}`}
+        onClick={() => setChatOverlayOpen(false)}
       />
 
       {/* Theme Toggle — fixed, sits right at the left edge of the sidebar */}
-      <div className={`theme-toggle-dock ${!isChatOpen ? 'chat-closed' : ''}`}>
+      <div className={`theme-toggle-dock ${!isChatOverlayOpen ? 'chat-closed' : ''}`}>
         <ThemeToggle isDark={isDark} onToggle={handleThemeToggle} />
       </div>
 
       {/* Desktop Chat Toggle Button */}
       <button
-        className={`chat-toggle-btn ${!isChatOpen ? 'chat-closed' : ''}`}
-        onClick={() => setIsChatOpen(!isChatOpen)}
-        title={isChatOpen ? 'Đóng khung chat' : 'Mở khung chat'}
+        className={`chat-toggle-btn ${!isChatOverlayOpen ? 'chat-closed' : ''}`}
+        onClick={() => setChatOverlayOpen(!isChatOverlayOpen)}
+        title={isChatOverlayOpen ? 'Đóng khung chat' : 'Mở khung chat'}
       >
-        {isChatOpen ? <ChevronRight className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
+        {isChatOverlayOpen ? <ChevronRight className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
       </button>
 
       {/* Chat Sidebar (Right side) */}
-      <div className={`sidebar-right ${!isChatOpen ? 'closed' : ''}`}>
+      <div className={`sidebar-right ${!isChatOverlayOpen ? 'closed' : ''}`}>
         <div style={{ width: '420px', height: '100%', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
           <div className="bottom-sheet-handle md:hidden" />
           <ChatPanel />
