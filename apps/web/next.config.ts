@@ -1,14 +1,16 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const isCI = process.env.VERCEL === "1" || process.env.CI === "true";
+
 const nextConfig: NextConfig = {
-  distDir: '.next-dev',
+  distDir: isCI ? undefined : '.next-dev',
   typescript: {
     ignoreBuildErrors: true,
   },
   allowedDevOrigins: ['192.168.2.39', 'localhost'],
   turbopack: {
-    root: "/home/cp/Documents/geoWeather"
+    root: path.resolve(process.cwd(), "../..")
   }
 };
 
