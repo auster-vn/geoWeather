@@ -1,6 +1,15 @@
 <div align="center">
 
-<img src="images/screenshot.png" alt="GeoWeather – AI-powered geospatial weather platform" width="100%">
+  <table border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center" valign="top" width="68%">
+        <img src="images/screenshot_web.png" alt="GeoWeather Web Dashboard" width="100%">
+      </td>
+      <td align="center" valign="top" width="32%">
+        <img src="images/screenshot_mobile.jpg" alt="GeoWeather Mobile Dashboard" width="100%">
+      </td>
+    </tr>
+  </table>
 
 <h1>🌏 GeoWeather</h1>
 
