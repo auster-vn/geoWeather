@@ -113,3 +113,22 @@ override.tf.json
 .terraformrc
 terraform.rc
 .claude/
+
+# 8. Dev / Scratch files (local only)
+test_*.py
+check_*.py
+seed_*.py
+convert.py
+*.log
+*.json.bak
+metno.json
+wttr.json
+uv.lock
+
+# Temporary build/tool dirs
+.pandoc-temp/
+supavisor-main/
+
+# Internal documents (not for public repo)
+PROJECT_OVERVIEW.md
+PROJECT_OVERVIEW.pdf

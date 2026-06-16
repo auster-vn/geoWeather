@@ -1,209 +1,289 @@
-<!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
-<a id="readme-top"></a>
-
-<!-- PROJECT SHIELDS -->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-
-<!-- PROJECT LOGO -->
-<br />
 <div align="center">
-  <a href="https://github.com/auster-vn/geoWeather">
-    <!-- <img src="images/logo.png" alt="Logo" width="80" height="80"> -->
-  </a>
 
-  <h3 align="center">GeoWeather</h3>
+<img src="images/screenshot.png" alt="GeoWeather – AI-powered geospatial weather platform" width="100%">
 
-  <p align="center">
-    Hệ thống bản đồ thời tiết thời gian thực và trợ lý AI phân tích không gian.
-    <br />
-    <a href="https://github.com/auster-vn/geoWeather"><strong>Khám phá tài liệu »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/auster-vn/geoWeather/issues/new?labels=bug&template=bug-report---.md">Báo cáo Lỗi</a>
-    ·
-    <a href="https://github.com/auster-vn/geoWeather/issues/new?labels=enhancement&template=feature-request---.md">Yêu cầu Tính năng</a>
-  </p>
+<h1>🌏 GeoWeather</h1>
+
+<p><strong>AI-powered real-time geospatial weather platform with hexagonal spatial indexing, NLP chat assistant, and live heatmap visualization</strong></p>
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://github.com/auster-vn/geoWeather/blob/main/LICENSE.txt)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Go](https://img.shields.io/badge/Go-Gateway-00ADD8?style=flat-square&logo=go)](https://golang.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-PostGIS-316192?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](https://github.com/auster-vn/geoWeather/pulls)
+
+<br/>
+
+[**Demo**](#usage) · [**Quick Start**](#getting-started) · [**Architecture**](#architecture) · [**Report Bug**](https://github.com/auster-vn/geoWeather/issues) · [**Request Feature**](https://github.com/auster-vn/geoWeather/issues)
+
 </div>
 
-<div align="center">
-  <img src="images/screenshot.png" alt="GeoWeather Screenshot" width="800">
-</div>
+---
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Mục Lục</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">Giới thiệu Dự án</a>
-      <ul>
-        <li><a href="#built-with">Công nghệ sử dụng</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Bắt đầu</a>
-      <ul>
-        <li><a href="#prerequisites">Yêu cầu hệ thống</a></li>
-        <li><a href="#installation">Cài đặt</a></li>
-      </ul>
-    </li>
-    <li><a href="#architecture">Kiến trúc</a></li>
-    <li><a href="#usage">Sử dụng</a></li>
-    <li><a href="#contributing">Đóng góp</a></li>
-    <li><a href="#license">Giấy phép</a></li>
-    <li><a href="#contact">Liên hệ</a></li>
-  </ol>
-</details>
+## ✨ What is GeoWeather?
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+Most weather apps show you a static number for a city. **GeoWeather does something different.**
 
-GeoWeather là một hệ thống bản đồ thời tiết thời gian thực được xây dựng với mục tiêu cung cấp dữ liệu thời tiết chính xác dựa trên lưới không gian lục giác H3 của Uber. Thay vì chỉ hiển thị thời tiết theo tên thành phố tĩnh, hệ thống thu thập và phân tích dữ liệu ở cấp độ không gian - thời gian, hỗ trợ truy vấn NLP thông minh thông qua trí tuệ nhân tạo.
+It splits the entire Earth's surface into a **hexagonal H3 grid** (by Uber) and fills it with live meteorological data — then lets you talk to an **AI assistant** that understands *where* you are and *what* you're asking, without you having to repeat yourself.
 
-### Công dụng (Use Cases)
-* **Theo dõi thời tiết thời gian thực:** Cập nhật liên tục trạng thái thời tiết, nhiệt độ, lượng mưa, tốc độ gió trên bản đồ.
-* **Phân tích không gian:** Phân mảnh bản đồ thành lưới H3 đa độ phân giải, giúp phân tích xu hướng thời tiết theo vùng chính xác.
-* **Trợ lý AI siêu nhận thức vị trí (Context-aware AI):** Tự động trích xuất và ghi nhớ tọa độ GPS (lat/lon) xuyên suốt các lượt chat. Chỉ cần chia sẻ vị trí một lần, AI có thể liên tục dự báo mưa, tia UV và nhiệt độ chính xác đến từng mét vuông mà không cần hỏi lại tên tỉnh/thành phố.
-* **Giao diện đa nền tảng mượt mà:** Tối ưu hóa trải nghiệm trên thiết bị di động (Mobile UI) với Bottom Sheet phong cách iOS, hiệu ứng Glassmorphism, và quản lý không gian bản đồ thông minh.
-* **Giám sát hệ thống:** Thu thập các số liệu vận hành và hiệu suất hệ thống thời gian thực với Prometheus và Grafana.
+> _"Chiều nay quận 1 có mưa không?"_ → The AI extracts your location from GPS or chat history, queries the nearest H3 cell, and tells you — in under 50ms — without calling any LLM API.
 
-<p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>
+---
 
-### Built With
+## 🚀 Key Features
 
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![FastAPI][FastAPI]][FastAPI-url]
-* [![Go][Go]][Go-url]
-* [![PostgreSQL][PostgreSQL]][PostgreSQL-url]
-* [![Redis][Redis]][Redis-url]
-* [![Docker][Docker]][Docker-url]
+| Feature | Description |
+|---|---|
+| 🗺️ **Live Heatmap** | WebGL-accelerated weather heatmap rendered with MapLibre GL at 60 FPS |
+| 🔷 **Uber H3 Grid** | Multi-resolution hexagonal spatial indexing (res 4 → res 7) for zoom-adaptive data |
+| 🤖 **Context-Aware AI** | Chat assistant that remembers your GPS position across turns — share location once, never again |
+| ⚡ **Local NLP** | FlashText O(1) city extraction — 50ms vs 3-5s for LLM round-trip |
+| 📍 **Reverse Geocoding** | Click anywhere on the map → auto-extracts street/ward/district via OpenStreetMap Nominatim |
+| 📱 **Mobile-First UI** | iOS-style Bottom Sheet, Glassmorphism panels, gesture-driven layout |
+| 📊 **Observability** | Prometheus metrics + Grafana dashboards out of the box |
+| 🔄 **Real-time Sync** | WebSocket push from TimescaleDB → Redis Pub/Sub → Frontend |
 
-<p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>
+---
 
-<!-- GETTING STARTED -->
-## Getting Started
+## 🏗️ Architecture
 
-Để có thể chạy dự án local, hãy làm theo các bước hướng dẫn bên dưới.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT LAYER                             │
+│   Next.js 15 + MapLibre GL + Framer Motion (port 3001)          │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ HTTP / WebSocket
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      GATEWAY LAYER (Go)                         │
+│   Reverse Proxy · Rate Limiting · Request Routing (port 80)     │
+└──────────┬──────────────────────────────────────┬───────────────┘
+           │                                      │
+           ▼                                      ▼
+┌──────────────────────┐              ┌────────────────────────────┐
+│   API LAYER          │              │   STREAMING PROCESSOR      │
+│   FastAPI (Python)   │◄─────────────│   Redis Pub/Sub listener   │
+│   • REST + WebSocket │              │   H3 aggregate compute     │
+│   • NLP / AI Chat    │              └────────────┬───────────────┘
+│   • Cache (Redis)    │                           │
+└──────────┬───────────┘                           │
+           │                                       │
+           ▼                                       ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                    DATA LAYER                                     │
+│  PostgreSQL + PostGIS + TimescaleDB (hypertable time-series)      │
+│  ┌──────────────────┐   ┌───────────────┐   ┌────────────────┐   │
+│  │ weather_current  │   │weather_obs    │   │ cities / geo   │   │
+│  │ (H3 aggregates)  │   │(hourly series)│   │ (10k+ cities)  │   │
+│  └──────────────────┘   └───────────────┘   └────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
+           ▲
+           │
+┌──────────┴───────────┐
+│  DATA INGESTION       │
+│  Open-Meteo → Parser │
+│  → H3 index → UPSERT │
+│  (batch 100 coords)  │
+└──────────────────────┘
+```
+
+### NLP Chat Flow (≤50ms for simple queries)
+
+```
+User message
+    │
+    ├─ GPS pattern detected? (lat:..., lon:...) ──► Nominatim Reverse Geocode
+    │
+    ├─ Intent extraction (rain / sun / forecast / weekly)
+    │
+    ├─ FlashText city scan (O(1), 10k+ keywords, Trie-based)
+    │
+    ├─ Hit? ──► Query TimescaleDB directly ──► Markdown + [MAP:lat,lon]
+    │
+    └─ Miss? ──► Gemini 2.5 Flash (function calling) ──► Structured response
+```
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+| | Technology | Purpose |
+|---|---|---|
+| ⚛️ | **Next.js 15** (App Router, TypeScript) | SSR, routing, performance |
+| 🗺️ | **MapLibre GL JS** | WebGL vector map rendering |
+| 🎨 | **Tailwind CSS + Framer Motion** | Styling & animations |
+| 📦 | **Zustand** | Lightweight global state |
+
+### Backend
+| | Technology | Purpose |
+|---|---|---|
+| 🐍 | **FastAPI** (ASGI / async) | REST API + WebSocket |
+| 🔵 | **Go** | High-performance gateway / reverse proxy |
+| 🦀 | **Rust** (`packages/core-rs`) | Performance-critical core utilities |
+| 🤖 | **Gemini 2.5 Flash** | LLM fallback for complex queries |
+| 🔍 | **FlashText** | O(1) local city/entity extraction |
+
+### Data
+| | Technology | Purpose |
+|---|---|---|
+| 🐘 | **PostgreSQL + PostGIS** | Spatial queries (`ST_DWithin`, `ST_MakePoint`) |
+| 📈 | **TimescaleDB** | Hypertable time-series partitioning |
+| ⚡ | **Redis** | Cache + Pub/Sub streaming |
+| 🔷 | **Uber H3** | Hexagonal spatial grid indexing |
+| 🌐 | **Open-Meteo API** | Free weather data (no API key limit) |
+
+### Infrastructure
+| | Technology | Purpose |
+|---|---|---|
+| 🐳 | **Docker Compose** | Full local cluster orchestration |
+| 📊 | **Prometheus + Grafana** | Metrics & observability |
+| 🔒 | **Supabase** | Managed PostgreSQL (free tier) |
+
+---
+
+## 🚦 Getting Started
 
 ### Prerequisites
 
-Hệ thống yêu cầu cài đặt Docker và Docker Compose.
-* docker
-  ```sh
-  sudo apt-get install docker-ce docker-ce-cli containerd.io
-  ```
+- [Docker](https://docs.docker.com/get-docker/) & Docker Compose v2
+- [Node.js](https://nodejs.org/) 20+ (for local frontend dev only)
+- API keys: **[Gemini](https://aistudio.google.com/)** + **[Mapbox](https://www.mapbox.com/)**
 
 ### Installation
 
-1. Lấy API Key từ [Google AI Studio](https://aistudio.google.com/) (Gemini) và [Mapbox](https://www.mapbox.com/).
-2. Clone repository
-   ```sh
-   git clone https://github.com/auster-vn/geoWeather.git
-   ```
-3. Cài đặt các gói NPM ở thư mục Web (nếu muốn chạy UI riêng biệt)
-   ```sh
-   npm install
-   ```
-4. Đổi tên file `.env.example` thành `.env` (nếu có) hoặc tạo file `.env` ở thư mục gốc:
-   ```env
-   # API Keys
-   GEMINI_API_KEY=ENTER_YOUR_API_KEY
-   NEXT_PUBLIC_MAPBOX_TOKEN=ENTER_YOUR_API_KEY
-   NEXT_PUBLIC_API_URL=http://localhost:8000
-   
-   # Database credentials
-   POSTGRES_USER=geo_user
-   POSTGRES_PASSWORD=your_password
-   POSTGRES_DB=geo_weather
-   ```
-5. Khởi động toàn bộ cụm dịch vụ qua Docker Compose
-   ```sh
-   docker-compose up -d --build
-   ```
+**1. Clone the repo**
+```bash
+git clone https://github.com/auster-vn/geoWeather.git
+cd geoWeather
+```
 
-<p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>
+**2. Configure environment**
+```bash
+cp .env.example .env
+# Fill in your API keys:
+```
 
-<!-- ARCHITECTURE -->
-## Kiến trúc
+```env
+# AI & Map
+GEMINI_API_KEY=your_gemini_key
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
 
-Hệ thống được thiết kế theo kiến trúc Microservices hướng sự kiện (Event-Driven):
-1. **Data Ingestion Service:** Các background workers (producer) liên tục lấy dữ liệu từ Open-Meteo và đẩy vào TimescaleDB/PostGIS.
-2. **Streaming Processor:** Lắng nghe thay đổi dữ liệu, tính toán các aggregate metric trên lưới H3 và phát sóng qua Redis Pub/Sub.
-3. **API Layer:** FastAPI xử lý các truy vấn từ client, thực hiện Cache với Redis, Rate Limiting, và duy trì các kết nối WebSockets để đẩy dữ liệu thời gian thực cho UI.
-4. **AI/NLP Layer:** Xử lý ngôn ngữ tự nhiên từ người dùng (Text/Audio), tích hợp Function Calling với Gemini 2.5 Flash để tra cứu CSDL.
-5. **Gateway Layer:** Được viết bằng Go, đóng vai trò Reverse Proxy nhận traffic, xử lý phân luồng requests về các service thích hợp.
+# API endpoints
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_WS_URL=ws://localhost:8000
 
-<p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>
+# Database
+POSTGRES_USER=geo_user
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=geo_weather
+DATABASE_URL=postgresql+asyncpg://geo_user:your_secure_password@db:5432/geo_weather
 
-<!-- USAGE EXAMPLES -->
-## Usage
+# Redis
+REDIS_URL=redis://redis:6379
+```
 
-Sau khi khởi động, các dịch vụ sẽ hoạt động tại:
-* **Frontend Web UI:** `http://localhost:3001`
-* **Backend API (Swagger Docs):** `http://localhost:8000/docs`
-* **Grafana Dashboard:** `http://localhost:3002` (Mặc định: `admin`/`admin`)
-* **Prometheus Metrics:** `http://localhost:9090`
+**3. Start the full stack**
+```bash
+docker-compose up -d --build
+```
 
-<p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>
+**4. (Optional) Local frontend dev**
+```bash
+cd apps/web
+npm install
+npm run dev
+```
 
-<!-- CONTRIBUTING -->
-## Contributing
+### Service Endpoints
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+| Service | URL | Credentials |
+|---|---|---|
+| 🌐 **Frontend** | http://localhost:3001 | — |
+| 📖 **API Docs (Swagger)** | http://localhost:8000/docs | — |
+| 📊 **Grafana** | http://localhost:3002 | `admin` / `admin` |
+| 📈 **Prometheus** | http://localhost:9090 | — |
 
-Nếu bạn có ý tưởng giúp dự án tốt hơn, hãy fork repo này và tạo một pull request. Bạn cũng có thể mở một issue với nhãn "enhancement". Đừng quên tặng dự án một ngôi sao (star)!
+---
+
+## 📁 Project Structure
+
+```
+geoWeather/
+├── apps/
+│   ├── web/                # Next.js 15 frontend
+│   │   ├── app/            # App router pages
+│   │   ├── components/     # UI components (map/, mobile/, panels/)
+│   │   ├── hooks/          # Custom React hooks
+│   │   └── store/          # Zustand state management
+│   ├── api/                # FastAPI backend
+│   │   ├── core/           # DB, config, dependencies
+│   │   ├── routers/        # API route handlers
+│   │   ├── services/       # NLP, AI, weather logic
+│   │   └── tools/          # LLM function-calling tools
+│   └── gateway/            # Go reverse proxy
+├── services/
+│   ├── ingestion/          # Open-Meteo data pipeline
+│   └── streaming/          # Redis Pub/Sub processor
+├── packages/
+│   └── core-rs/            # Rust core utilities
+├── infra/                  # Terraform / deployment configs
+├── free_deployment/        # Scripts for Supabase free-tier
+├── docker-compose.yml
+└── .env.example
+```
+
+---
+
+## 🎯 Use Cases
+
+- **🌧️ Hyperlocal rain alerts** — Query weather at exact GPS coordinates, not just city level
+- **🗺️ Spatial weather analysis** — Compare temperature/rain across H3 grid zones on the map
+- **🤖 Conversational forecasts** — Ask in natural Vietnamese/English, get structured answers
+- **📡 IoT data ingestion** *(roadmap)* — Accept data from ESP32 weather stations
+
+---
+
+## 🔮 Roadmap
+
+- [ ] **Flood Warning System** — ML model on TimescaleDB rain series + DEM elevation data
+- [ ] **IoT Weather Stations** — Open API for ESP32/sensor direct push
+- [ ] **Traffic + Weather Routing** — "Rain-free" route suggestions for delivery riders
+- [ ] **PWA Offline Mode** — Cache last H3 snapshot for offline use
+- [ ] **Multi-language NLP** — Expand beyond Vietnamese/English
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! GeoWeather is an open platform for geospatial weather innovation.
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+3. Commit your Changes (`git commit -m 'feat: add AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-<p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>
+Please follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
 
-<!-- LICENSE -->
-## License
+---
 
-Phân phối dưới giấy phép MIT. Xem file `LICENSE.txt` để biết thêm thông tin.
+## 📄 License
 
-<p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>
+Distributed under the **MIT License**. See [`LICENSE.txt`](LICENSE.txt) for more information.
 
-<!-- CONTACT -->
-## Contact
+---
 
-Auster VN - [@auster_vn](https://auster-vn.github.io/#contact) 
+## 👤 Contact
 
-Project Link: [https://github.com/auster-vn/geoWeather](https://github.com/auster-vn/geoWeather)
+**Auster VN** — [@auster_vn](https://auster-vn.github.io/#contact)
 
-<p align="right">(<a href="#readme-top">quay lại đầu trang</a>)</p>
+🔗 **Project:** https://github.com/auster-vn/geoWeather
 
-<!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/auster-vn/geoWeather.svg?style=for-the-badge
-[contributors-url]: https://github.com/auster-vn/geoWeather/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/auster-vn/geoWeather.svg?style=for-the-badge
-[forks-url]: https://github.com/auster-vn/geoWeather/network/members
-[stars-shield]: https://img.shields.io/github/stars/auster-vn/geoWeather.svg?style=for-the-badge
-[stars-url]: https://github.com/auster-vn/geoWeather/stargazers
-[issues-shield]: https://img.shields.io/github/issues/auster-vn/geoWeather.svg?style=for-the-badge
-[issues-url]: https://github.com/auster-vn/geoWeather/issues
-[license-shield]: https://img.shields.io/github/license/auster-vn/geoWeather.svg?style=for-the-badge
-[license-url]: https://github.com/auster-vn/geoWeather/blob/master/LICENSE.txt
+---
 
-[Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
-[Next-url]: https://nextjs.org/
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-[React-url]: https://reactjs.org/
-[FastAPI]: https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white
-[FastAPI-url]: https://fastapi.tiangolo.com/
-[Go]: https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white
-[Go-url]: https://golang.org/
-[PostgreSQL]: https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white
-[PostgreSQL-url]: https://www.postgresql.org/
-[Redis]: https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white
-[Redis-url]: https://redis.io/
-[Docker]: https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white
-[Docker-url]: https://www.docker.com/
+<div align="center">
+  <sub>Built with ❤️ using Next.js · FastAPI · Go · PostgreSQL · Uber H3 · Gemini AI</sub>
+</div>
