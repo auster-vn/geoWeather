@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   },
   allowedDevOrigins: ['192.168.2.39', 'localhost'],
   turbopack: {
-    root: path.resolve(process.cwd(), "../..")
+    root: path.resolve(__dirname, "../..")
   }
 };
 
