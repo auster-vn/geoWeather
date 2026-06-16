@@ -60,8 +60,10 @@ export function BottomSheet() {
       finally { setLoading(false) }
     }
     go()
-    // When a location is selected, expand sheet to half
-    setSheetState('half')
+    // When a location is selected, expand sheet to half if collapsed
+    if (sheetState === 'collapsed') {
+      setSheetState('half')
+    }
   }, [selectedLocation])
 
   const getHeightPx = useCallback((state: SheetState) => {

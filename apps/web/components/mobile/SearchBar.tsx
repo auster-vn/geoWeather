@@ -22,7 +22,7 @@ export function SearchBar() {
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
-  const { setSelectedLocation } = useWeatherStore()
+  const { setSelectedLocation, setSheetState, setActiveBottomNav } = useWeatherStore()
 
   // Load recent searches
   useEffect(() => {
@@ -73,12 +73,16 @@ export function SearchBar() {
     setResults([])
     setFocused(false)
     inputRef.current?.blur()
+    setSheetState('full')
+    setActiveBottomNav('analytics')
   }
 
   const handleGPS = () => {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(({ coords }) => {
       setSelectedLocation({ lat: coords.latitude, lon: coords.longitude, cityName: 'Vị trí của tôi' })
+      setSheetState('full')
+      setActiveBottomNav('analytics')
     })
   }
 
