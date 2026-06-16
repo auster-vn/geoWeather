@@ -5,9 +5,57 @@ from sqlalchemy import text
 from typing import List
 from ..core.database import get_db
 from ..schemas.weather import CitySearchResponse
+from ..services.ai_nlp import nlp_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+@router.get("/nlp")
+async def nlp_resolve_location(
+    q: str = Query(..., min_length=1),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Resolve a natural language query to a city's coordinates and name using Local NLP.
+    """
+    try:
+        location = await nlp_service.extract_location(q, db)
+        if not location:
+            # Try to resolve by matching direct substrings if extraction is too strict
+            words = q.strip().split()
+            candidates = []
+            for i in range(len(words)):
+                candidates.append(words[i])
+                if i < len(words) - 1:
+                    candidates.append(f"{words[i]} {words[i+1]}")
+            
+            # Look up candidate city names
+            for cand in sorted(candidates, key=len, reverse=True):
+                if len(cand) < 3:
+                    continue
+                lat, lon, city_name = await nlp_service.get_city_coords(cand, db)
+                if lat is not None and lon is not None:
+                    return {
+                        "city_name": city_name,
+                        "latitude": lat,
+                        "longitude": lon
+                    }
+            raise HTTPException(status_code=404, detail="Location not found in query.")
+        
+        lat, lon, city_name = await nlp_service.get_city_coords(location, db)
+        if lat is None or lon is None:
+            raise HTTPException(status_code=404, detail="Could not find coordinates for location.")
+            
+        return {
+            "city_name": city_name,
+            "latitude": lat,
+            "longitude": lon
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"NLP location resolution error: {e}")
+        raise HTTPException(status_code=500, detail="NLP resolution failed.")
 
 @router.get("/search", response_model=List[CitySearchResponse])
 async def search_cities(

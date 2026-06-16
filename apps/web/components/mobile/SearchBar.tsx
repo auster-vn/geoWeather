@@ -22,7 +22,7 @@ export function SearchBar() {
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
-  const { setSelectedLocation, setSheetState, setActiveBottomNav } = useWeatherStore()
+  const { setSelectedLocation, setSheetState, setActiveBottomNav, setChatOverlayOpen } = useWeatherStore()
 
   // Load recent searches
   useEffect(() => {
@@ -49,8 +49,14 @@ export function SearchBar() {
       const res = await fetch(`${apiHost}/api/v1/location/search?q=${encodeURIComponent(q)}&limit=6`)
       if (res.ok) {
         const data = await res.json()
-        // API may return array of {lat, lon, name, country} or similar
-        setResults(Array.isArray(data) ? data : data.results ?? [])
+        const rawResults = Array.isArray(data) ? data : data.results ?? []
+        const mapped = rawResults.map((item: any) => ({
+          lat: item.latitude ?? item.lat,
+          lon: item.longitude ?? item.lon,
+          name: item.city_name ?? item.name,
+          country: item.country_code ?? item.country
+        }))
+        setResults(mapped)
       }
     } catch {
       setResults([])
@@ -74,18 +80,10 @@ export function SearchBar() {
     setFocused(false)
     inputRef.current?.blur()
     
-    // Open AI Chat
-    setChatOverlayOpen(true)
-    setActiveBottomNav('ai')
-    
-    // Dispatch query to AI Chat
-    setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent('geoweather:chat-prompt', {
-          detail: `Thời tiết tại ${result.name}`
-        })
-      )
-    }, 300)
+    // Open the detailed dashboard directly
+    setSheetState('full')
+    setActiveBottomNav('analytics')
+    setChatOverlayOpen(false)
   }
 
   const handleGPS = () => {
@@ -94,6 +92,7 @@ export function SearchBar() {
       setSelectedLocation({ lat: coords.latitude, lon: coords.longitude, cityName: 'Vị trí của tôi' })
       setSheetState('full')
       setActiveBottomNav('analytics')
+      setChatOverlayOpen(false)
     })
   }
 
@@ -109,17 +108,44 @@ export function SearchBar() {
       return
     }
 
-    // 2. Otherwise, fetch immediately
+    // 2. Otherwise, fetch immediately via search API prefix match
     setLoading(true)
+    const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
     try {
-      const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
       const res = await fetch(`${apiHost}/api/v1/location/search?q=${encodeURIComponent(query)}&limit=1`)
       if (res.ok) {
         const data = await res.json()
         const searchResults = Array.isArray(data) ? data : data.results ?? []
         if (searchResults.length > 0) {
-          handleSelect(searchResults[0])
+          const first = searchResults[0]
+          handleSelect({
+            lat: first.latitude ?? first.lat,
+            lon: first.longitude ?? first.lon,
+            name: first.city_name ?? first.name,
+            country: first.country_code ?? first.country
+          })
           setQuery('')
+          setLoading(false)
+          return
+        }
+      }
+    } catch (err) {
+      console.error(err)
+    }
+
+    // 3. NLP extraction API fallback (if direct search fails, e.g. 'Thời tiết Hà Nội')
+    try {
+      const res = await fetch(`${apiHost}/api/v1/location/nlp?q=${encodeURIComponent(query)}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data && data.latitude !== undefined && data.longitude !== undefined) {
+          handleSelect({
+            lat: data.latitude,
+            lon: data.longitude,
+            name: data.city_name || query
+          })
+          setQuery('')
+          setLoading(false)
           return
         }
       }
@@ -129,7 +155,7 @@ export function SearchBar() {
       setLoading(false)
     }
 
-    // 3. Fallback: Send the raw query directly to local AI
+    // 4. Fallback: If both fail, send the raw query directly to local AI Chat
     setChatOverlayOpen(true)
     setActiveBottomNav('ai')
     setTimeout(() => {

@@ -265,6 +265,9 @@ async def run_mock_chat(message: str, db: AsyncSession, history: list = None):
                 if city_to_query:
                     break
 
+    if city_to_query:
+        yield f"data: {json.dumps({'type': 'location_resolved', 'city_name': city_to_query['city_name'], 'lat': city_to_query['lat'], 'lon': city_to_query['lon']})}\n\n"
+
     response_text = ""
 
     if city_to_query and is_sun_query:
@@ -444,6 +447,7 @@ async def run_local_nlp_chat(message: str, db: AsyncSession, history: list = Non
     
     if location:
         if lat is not None and lon is not None:
+            yield f"data: {json.dumps({'type': 'location_resolved', 'city_name': city_name, 'lat': lat, 'lon': lon})}\n\n"
             if target_time:
                 from ..tools.weather_tools import execute_tool
                 params = {"lat": lat, "lon": lon, "target_time": target_time} if coords_resolved else {"city_name": city_name, "target_time": target_time}

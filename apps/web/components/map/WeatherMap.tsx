@@ -242,6 +242,7 @@ export function WeatherMap({ isDark = false }: { isDark?: boolean }) {
                 countryCode: item.country_code
               })
             }
+            return true
           }
         })
       )

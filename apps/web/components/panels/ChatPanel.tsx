@@ -236,6 +236,13 @@ export function ChatPanel() {
             })
           } else if (parsed.type === 'tool_result') {
             setToolStatus('')
+            if (parsed.data && parsed.data.lat !== undefined && parsed.data.lon !== undefined) {
+              setSelectedLocation({
+                lat: parsed.data.lat,
+                lon: parsed.data.lon,
+                cityName: parsed.data.city_name || parsed.data.place_name || "Địa điểm"
+              })
+            }
             setMessages(prev => {
               const next = [...prev]
               if (next.length > 0) {
@@ -246,6 +253,38 @@ export function ChatPanel() {
               }
               return next
             })
+          } else if (parsed.type === 'location_resolved') {
+            if (parsed.lat !== undefined && parsed.lon !== undefined) {
+              setSelectedLocation({
+                lat: parsed.lat,
+                lon: parsed.lon,
+                cityName: parsed.city_name || "Địa điểm"
+              })
+              
+              // Fetch current weather details for this resolved location to render card inside chat
+              const weatherApiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+              fetch(`${weatherApiHost}/api/v1/weather/nearest/${parsed.lat}/${parsed.lon}`)
+                .then(res => res.json())
+                .then(weatherData => {
+                  setMessages(prev => {
+                    const next = [...prev]
+                    if (next.length > 0) {
+                      next[next.length - 1] = {
+                        ...next[next.length - 1],
+                        toolName: 'get_weather_by_coords',
+                        toolData: {
+                          ...weatherData,
+                          city_name: parsed.city_name || weatherData.city_name || "Địa điểm",
+                          lat: parsed.lat,
+                          lon: parsed.lon
+                        }
+                      }
+                    }
+                    return next
+                  })
+                })
+                .catch(err => console.error("Failed to fetch weather for resolved location", err))
+            }
           }
         } catch (e) {
           console.error("SSE parse error", e, event.data)
@@ -468,6 +507,52 @@ export function ChatPanel() {
                   </ReactMarkdown>
                   {m.toolData && m.toolName === 'get_rain_forecast' && (
                     <ChatWeatherChart data={m.toolData} />
+                  )}
+                  {m.toolData && (m.toolName === 'get_weather_by_city' || m.toolName === 'get_weather_by_coords') && (
+                    <div className="chat-weather-dashboard-card" style={{
+                      marginTop: '12px',
+                      background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(16, 185, 129, 0.1))',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      color: 'var(--text-primary)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>
+                          📍 {m.toolData.city_name || m.toolData.place_name || "Địa điểm"}
+                        </h4>
+                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                          {m.toolData.lat?.toFixed(2)}°, {m.toolData.lon?.toFixed(2)}°
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--accent-primary)' }}>
+                          {m.toolData.temperature !== undefined ? `${m.toolData.temperature?.toFixed(1)}°C` : '--'}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 600 }}>{m.toolData.condition || 'Ổn định'}</div>
+                          {m.toolData.feels_like !== undefined && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                              Cảm giác như: {m.toolData.feels_like?.toFixed(1)}°C
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          💨 Gió: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.wind_speed !== undefined ? `${m.toolData.wind_speed?.toFixed(1)} m/s` : '--'}</strong>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          💧 Độ ẩm: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.humidity !== undefined ? `${m.toolData.humidity?.toFixed(0)}%` : '--'}</strong>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          🌧️ Mưa: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.precipitation !== undefined ? `${m.toolData.precipitation?.toFixed(1)} mm` : '--'}</strong>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          ☁️ Mây: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.cloud_cover !== undefined ? m.toolData.cloud_cover : '--'}</strong>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
