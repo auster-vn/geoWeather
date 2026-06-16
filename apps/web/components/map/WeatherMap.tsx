@@ -39,7 +39,26 @@ export function WeatherMap({ isDark = false }: { isDark?: boolean }) {
   const [loading, setLoading] = useState(true)
   const [errorLog, setErrorLog] = useState<string | null>(null)
 
-  const { activeLayer, selectedLocation, setSelectedLocation, mapViewport, setMapViewport } = useWeatherStore()
+  const { activeLayer, selectedLocation, setSelectedLocation, mapViewport, setMapViewport, isChatOverlayOpen } = useWeatherStore()
+
+  // Trigger map resize when sidebar opens/closes to fill container smoothly
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+
+    let count = 0
+    const intervalId = setInterval(() => {
+      if (mapRef.current) {
+        mapRef.current.resize()
+      }
+      count++
+      if (count > 30) {
+        clearInterval(intervalId)
+      }
+    }, 15) // run for 450ms to cover the 400ms transition
+
+    return () => clearInterval(intervalId)
+  }, [isChatOverlayOpen])
 
   // Fetch weather points from FastAPI
   useEffect(() => {
