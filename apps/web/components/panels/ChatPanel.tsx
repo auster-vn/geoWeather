@@ -215,7 +215,7 @@ export function ChatPanel() {
               const next = [...prev]
               if (next.length > 0) {
                 next[next.length - 1] = {
-                  role: 'assistant',
+                  ...next[next.length - 1],
                   content: fullContent.replace(/\[MAP:.*\]/g, '').replace(/\[ROUTE:.*\]/g, '').replace(/_FETCHED_ROUTE/g, '') // strip map/route tags from UI
                 }
               }
