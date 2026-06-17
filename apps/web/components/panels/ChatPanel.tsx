@@ -170,6 +170,7 @@ export function ChatPanel() {
       const eventSource = new EventSource(eventSourceUrl)
       
       let fullContent = ''
+      let hasSetMap = false
       
       eventSource.onmessage = (event) => {
         if (event.data === '[DONE]') {
@@ -186,7 +187,8 @@ export function ChatPanel() {
             
             // Check if there is a MAP tag in the text stream, e.g. [MAP:21.0285,105.8542,10]
             const mapMatch = fullContent.match(/\[MAP:(-?\d+\.?\d*),(-?\d+\.?\d*),(\d+)\]/)
-            if (mapMatch) {
+            if (mapMatch && !hasSetMap) {
+              hasSetMap = true
               const lat = parseFloat(mapMatch[1])
               const lon = parseFloat(mapMatch[2])
               setSelectedLocation({
