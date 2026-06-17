@@ -10,7 +10,7 @@ const TABS: { id: BottomNavTab; label: string; icon: string }[] = [
 ]
 
 export function BottomNavigation() {
-  const { activeBottomNav, setActiveBottomNav, setChatOverlayOpen, setSheetState } = useWeatherStore()
+  const { activeBottomNav, setActiveBottomNav, setChatOverlayOpen, setSheetState, selectedLocation } = useWeatherStore()
 
   const handleTab = (id: BottomNavTab) => {
     setActiveBottomNav(id)
@@ -23,7 +23,9 @@ export function BottomNavigation() {
       setSheetState('full')
     }
     if (id === 'map') {
-      setSheetState('collapsed')
+      if (!selectedLocation) {
+        setSheetState('collapsed')
+      }
     }
   }
 

@@ -425,7 +425,8 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
 
         # Try cached weather from DB first
         weather_query = text("""
-            SELECT wc.*, c.city_name, c.country_code
+            SELECT wc.*, c.city_name, c.country_code,
+                   ST_Y(c.geom) AS lat, ST_X(c.geom) AS lon
             FROM weather_current wc
             JOIN cities c ON c.geoname_id = wc.location_id
             WHERE wc.location_id = :loc_id;
@@ -678,9 +679,9 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
             })
 
         return {
-            "city": city["city_name"],
-            "lat": city["lat"],
-            "lon": city["lon"],
+            "city": city["city_name"] if 'city' in locals() and city else f"{lat},{lon}",
+            "lat": lat,
+            "lon": lon,
             "daily_forecast": daily,
         }
 
@@ -688,25 +689,34 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
     # ── get_air_quality_and_uv ────────────────────────────────────────────────
     elif name == "get_air_quality_and_uv":
         city_name = arguments.get("city_name")
-        city = await _resolve_city(city_name, db)
-        if not city:
-            return {"error": f"City '{city_name}' not found."}
+        lat       = arguments.get("lat")
+        lon       = arguments.get("lon")
+
+        if lat is not None and lon is not None:
+            timezone = "Asia/Bangkok"
+        else:
+            city = await _resolve_city(city_name, db)
+            if not city:
+                return {"error": f"City '{city_name}' not found."}
+            lat = city["lat"]
+            lon = city["lon"]
+            timezone = city.get("timezone", "Asia/Bangkok")
 
         try:
             url = "https://air-quality-api.open-meteo.com/v1/air-quality"
             params = {
-                "latitude": city["lat"],
-                "longitude": city["lon"],
+                "latitude": lat,
+                "longitude": lon,
                 "current": "european_aqi,us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,uv_index",
-                "timezone": city.get("timezone", "Asia/Bangkok")
+                "timezone": timezone
             }
             data = await _fetch_with_cache(url, params)
 
             cur = data.get("current", {})
             return {
-                "city": city["city_name"],
-                "lat": city["lat"],
-                "lon": city["lon"],
+                "city": city["city_name"] if 'city' in locals() and city else f"{lat},{lon}",
+                "lat": lat,
+                "lon": lon,
                 "aqi": cur.get("us_aqi"),
                 "pm2_5": cur.get("pm2_5"),
                 "pm10": cur.get("pm10"),
@@ -764,10 +774,10 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
             })
 
         return {
-            "city": city["city_name"],
-            "lat": city["lat"],
-            "lon": city["lon"],
-            "timezone": city.get("timezone", "Asia/Bangkok"),
+            "city": city["city_name"] if 'city' in locals() and city else f"{lat},{lon}",
+            "lat": lat,
+            "lon": lon,
+            "timezone": city.get("timezone", "Asia/Bangkok") if 'city' in locals() and city else "Asia/Bangkok",
             "sun_schedule": sun_schedule,
         }
 
