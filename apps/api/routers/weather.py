@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +33,8 @@ async def get_nearest_weather(lat: float, lon: float, db: AsyncSession = Depends
                 c.country_code,
                 c.h3_r4,
                 c.h3_r7,
+                ST_Y(c.geom) AS lat,
+                ST_X(c.geom) AS lon,
                 ST_Distance(
                     c.geom::geography,
                     ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography
@@ -68,6 +71,85 @@ async def get_nearest_weather(lat: float, lon: float, db: AsyncSession = Depends
             import h3
             data["h3_r4"] = h3.latlng_to_cell(lat, lon, 4)
             data["h3_r7"] = h3.latlng_to_cell(lat, lon, 7)
+            
+        if data.get("temperature") is None:
+            logger.info(f"Weather data not found in DB for city {data.get('city_name')}, fetching live fallback...")
+            try:
+                url = "https://api.open-meteo.com/v1/forecast"
+                params = {
+                    "latitude": data["lat"],
+                    "longitude": data["lon"],
+                    "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,visibility,uv_index,cloud_cover",
+                    "timezone": "Asia/Bangkok",
+                    "forecast_days": 1,
+                }
+                from ..tools.weather_tools import _fetch_with_cache
+                resp = await _fetch_with_cache(url, params)
+                cur = resp.get("current", {})
+                
+                observed_at_dt = datetime.now(timezone.utc)
+                if "time" in cur:
+                    try:
+                        observed_at_dt = datetime.fromisoformat(cur["time"]).replace(tzinfo=timezone.utc)
+                    except Exception:
+                        pass
+                
+                data.update({
+                    "temperature": cur.get("temperature_2m"),
+                    "feels_like": cur.get("apparent_temperature"),
+                    "humidity": cur.get("relative_humidity_2m"),
+                    "wind_speed": cur.get("wind_speed_10m"),
+                    "wind_direction": cur.get("wind_direction_10m"),
+                    "precipitation": cur.get("precipitation"),
+                    "weather_code": cur.get("weather_code"),
+                    "observed_at": observed_at_dt
+                })
+                
+                # Save/upsert to weather_current table in database to cache it
+                upsert_query = text("""
+                    INSERT INTO weather_current (
+                        location_id, temperature, feels_like, humidity, wind_speed, 
+                        wind_direction, precipitation, weather_code, pressure, 
+                        visibility, uv_index, cloud_cover, updated_at
+                    ) VALUES (
+                        :location_id, :temperature, :feels_like, :humidity, :wind_speed, 
+                        :wind_direction, :precipitation, :weather_code, :pressure, 
+                        :visibility, :uv_index, :cloud_cover, :updated_at
+                    )
+                    ON CONFLICT (location_id) DO UPDATE SET
+                        temperature = EXCLUDED.temperature,
+                        feels_like = EXCLUDED.feels_like,
+                        humidity = EXCLUDED.humidity,
+                        wind_speed = EXCLUDED.wind_speed,
+                        wind_direction = EXCLUDED.wind_direction,
+                        precipitation = EXCLUDED.precipitation,
+                        weather_code = EXCLUDED.weather_code,
+                        pressure = EXCLUDED.pressure,
+                        visibility = EXCLUDED.visibility,
+                        uv_index = EXCLUDED.uv_index,
+                        cloud_cover = EXCLUDED.cloud_cover,
+                        updated_at = EXCLUDED.updated_at;
+                """)
+                
+                await db.execute(upsert_query, {
+                    "location_id": data["geoname_id"],
+                    "temperature": cur.get("temperature_2m"),
+                    "feels_like": cur.get("apparent_temperature"),
+                    "humidity": cur.get("relative_humidity_2m"),
+                    "wind_speed": cur.get("wind_speed_10m"),
+                    "wind_direction": cur.get("wind_direction_10m"),
+                    "precipitation": cur.get("precipitation"),
+                    "weather_code": cur.get("weather_code"),
+                    "pressure": cur.get("surface_pressure"),
+                    "visibility": cur.get("visibility"),
+                    "uv_index": cur.get("uv_index"),
+                    "cloud_cover": cur.get("cloud_cover"),
+                    "updated_at": observed_at_dt
+                })
+                await db.commit()
+                logger.info(f"Successfully fetched and cached live weather for city_id {data['geoname_id']} ({data['city_name']}) via /nearest fallback")
+            except Exception as e:
+                logger.error(f"Failed live fetch and cache in /nearest/{lat}/{lon}: {e}")
             
         return data
     except Exception as e:
