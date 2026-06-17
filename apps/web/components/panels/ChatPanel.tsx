@@ -191,10 +191,12 @@ export function ChatPanel() {
               hasSetMap = true
               const lat = parseFloat(mapMatch[1])
               const lon = parseFloat(mapMatch[2])
+              
+              const currentLoc = useWeatherStore.getState().selectedLocation
               setSelectedLocation({
                 lat,
                 lon,
-                cityName: "Tìm kiếm bản đồ"
+                cityName: currentLoc?.cityName && currentLoc.cityName !== "Tìm kiếm bản đồ" ? currentLoc.cityName : "Tìm kiếm bản đồ"
               })
             }
 
