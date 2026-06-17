@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/nearest/{lat}/{lon}", response_model=WeatherResponse)
-@cache(expire=300)
 async def get_nearest_weather(lat: float, lon: float, db: AsyncSession = Depends(get_db)):
     """
     Find the nearest city and return its latest weather.
