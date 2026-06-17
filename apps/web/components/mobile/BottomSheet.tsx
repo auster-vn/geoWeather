@@ -126,7 +126,7 @@ export function BottomSheet() {
     <div
       ref={sheetRef}
       className="mobile-bottom-sheet"
-      style={{ height: `${SNAP_COLLAPSED}px` }}
+      style={{ height: `${getHeightPx(sheetState)}px` }}
       onTouchStart={(e) => onDragStart(e.touches[0].clientY)}
       onTouchMove={(e) => onDragMove(e.touches[0].clientY)}
       onTouchEnd={(e) => onDragEnd(e.changedTouches[0].clientY)}
