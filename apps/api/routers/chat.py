@@ -451,7 +451,9 @@ async def run_local_nlp_chat(message: str, db: AsyncSession, history: list = Non
             if target_time:
                 from ..tools.weather_tools import execute_tool
                 params = {"lat": lat, "lon": lon, "target_time": target_time} if coords_resolved else {"city_name": city_name, "target_time": target_time}
+                yield f"data: {json.dumps({'type': 'tool_call', 'tool': 'get_hourly_forecast', 'args': params})}\n\n"
                 hourly = await execute_tool("get_hourly_forecast", params, db)
+                yield f"data: {json.dumps({'type': 'tool_result', 'tool': 'get_hourly_forecast', 'data': hourly})}\n\n"
                 if "error" in hourly:
                     response_text = f"Xin lỗi, {hourly['error']}"
                 else:
@@ -465,7 +467,9 @@ async def run_local_nlp_chat(message: str, db: AsyncSession, history: list = Non
             elif intent == "rain" or intent == "forecast":
                 from ..tools.weather_tools import execute_tool
                 params = {"lat": lat, "lon": lon} if coords_resolved else {"city_name": city_name}
+                yield f"data: {json.dumps({'type': 'tool_call', 'tool': 'get_rain_forecast', 'args': params})}\n\n"
                 forecast = await execute_tool("get_rain_forecast", params, db)
+                yield f"data: {json.dumps({'type': 'tool_result', 'tool': 'get_rain_forecast', 'data': forecast})}\n\n"
                 if "error" in forecast:
                     response_text = f"Xin lỗi, {forecast['error']}"
                 else:
@@ -517,7 +521,9 @@ async def run_local_nlp_chat(message: str, db: AsyncSession, history: list = Non
             elif intent == "sun":
                 from ..tools.weather_tools import execute_tool
                 params = {"lat": lat, "lon": lon} if coords_resolved else {"city_name": city_name}
+                yield f"data: {json.dumps({'type': 'tool_call', 'tool': 'get_sun_times', 'args': params})}\n\n"
                 sun = await execute_tool("get_sun_times", params, db)
+                yield f"data: {json.dumps({'type': 'tool_result', 'tool': 'get_sun_times', 'data': sun})}\n\n"
                 if "error" in sun:
                     response_text = f"Xin lỗi, {sun['error']}"
                 else:
@@ -528,7 +534,10 @@ async def run_local_nlp_chat(message: str, db: AsyncSession, history: list = Non
                     )
             else:
                 from ..tools.weather_tools import execute_tool
-                weather = await execute_tool("get_weather_by_coords", {"lat": lat, "lon": lon, "location_name": city_name}, db)
+                params = {"lat": lat, "lon": lon, "location_name": city_name}
+                yield f"data: {json.dumps({'type': 'tool_call', 'tool': 'get_weather_by_coords', 'args': params})}\n\n"
+                weather = await execute_tool("get_weather_by_coords", params, db)
+                yield f"data: {json.dumps({'type': 'tool_result', 'tool': 'get_weather_by_coords', 'data': weather})}\n\n"
                 if "error" in weather:
                     response_text = f"Xin lỗi, {weather['error']}"
                 else:

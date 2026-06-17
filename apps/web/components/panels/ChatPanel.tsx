@@ -554,6 +554,101 @@ export function ChatPanel() {
                       </div>
                     </div>
                   )}
+                  {m.toolData && m.toolName === 'get_daily_forecast' && m.toolData.daily_forecast && (
+                    <div className="chat-weather-forecast-card" style={{
+                      marginTop: '12px',
+                      background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(59, 130, 246, 0.1))',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      padding: '14px',
+                      color: 'var(--text-primary)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700 }}>
+                          📅 Dự báo 7 ngày — {m.toolData.city || "Địa điểm"}
+                        </h4>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {m.toolData.daily_forecast.map((day: any, dIdx: number) => (
+                          <div key={dIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', paddingBottom: '6px', borderBottom: dIdx < m.toolData.daily_forecast.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                            <span style={{ fontWeight: 500, width: '75px' }}>{day.date.slice(5)}</span>
+                            <span style={{ flex: 1, textAlign: 'left', color: 'var(--text-secondary)' }}>{day.condition}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>
+                              {day.temp_min?.toFixed(0)}° - {day.temp_max?.toFixed(0)}°C
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {m.toolData && m.toolName === 'get_air_quality_and_uv' && (
+                    <div className="chat-weather-aqi-card" style={{
+                      marginTop: '12px',
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(245, 158, 11, 0.1))',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      color: 'var(--text-primary)'
+                    }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 700 }}>
+                        😷 Không khí & UV — {m.toolData.city || "Địa điểm"}
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '10px', textAlign: 'center' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Chỉ số AQI (Mỹ)</span>
+                          <span style={{ fontSize: '24px', fontWeight: 800, color: m.toolData.aqi <= 50 ? '#10b981' : (m.toolData.aqi <= 100 ? '#f59e0b' : '#ef4444') }}>
+                            {m.toolData.aqi ?? '--'}
+                          </span>
+                          <span style={{ fontSize: '10px', display: 'block', marginTop: '4px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            {m.toolData.aqi <= 50 ? 'Tốt' : (m.toolData.aqi <= 100 ? 'Trung bình' : 'Kém')}
+                          </span>
+                        </div>
+                        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '10px', textAlign: 'center' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Chỉ số UV (Max)</span>
+                          <span style={{ fontSize: '24px', fontWeight: 800, color: m.toolData.uv_index <= 2 ? '#10b981' : (m.toolData.uv_index <= 5 ? '#f59e0b' : '#ef4444') }}>
+                            {m.toolData.uv_index?.toFixed(1) ?? '--'}
+                          </span>
+                          <span style={{ fontSize: '10px', display: 'block', marginTop: '4px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            {m.toolData.uv_index <= 2 ? 'Thấp' : (m.toolData.uv_index <= 5 ? 'Vừa' : (m.toolData.uv_index <= 7 ? 'Cao' : 'Rất cao'))}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        <span>Bụi PM2.5: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.pm2_5 !== undefined ? `${m.toolData.pm2_5?.toFixed(1)} µg/m³` : '--'}</strong></span>
+                        <span>Bụi PM10: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.pm10 !== undefined ? `${m.toolData.pm10?.toFixed(1)} µg/m³` : '--'}</strong></span>
+                      </div>
+                    </div>
+                  )}
+                  {m.toolData && m.toolName === 'get_sun_times' && m.toolData.sun_schedule && m.toolData.sun_schedule[0] && (
+                    <div className="chat-weather-sun-card" style={{
+                      marginTop: '12px',
+                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.1))',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      color: 'var(--text-primary)'
+                    }}>
+                      <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 700 }}>
+                        🌅 Bình minh & Hoàng hôn — {m.toolData.city || "Địa điểm"}
+                      </h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '12px' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <span style={{ fontSize: '20px', display: 'block' }}>🌄</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>Bình minh</span>
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: '#facc15' }}>{m.toolData.sun_schedule[0].sunrise}</span>
+                        </div>
+                        <div style={{ height: '30px', width: '1px', background: 'rgba(255,255,255,0.1)' }} />
+                        <div style={{ textAlign: 'center' }}>
+                          <span style={{ fontSize: '20px', display: 'block' }}>🌇</span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block', marginTop: '2px' }}>Hoàng hôn</span>
+                          <span style={{ fontSize: '15px', fontWeight: 700, color: '#f97316' }}>{m.toolData.sun_schedule[0].sunset}</span>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        Số giờ nắng: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.sun_schedule[0].daylight_hours} giờ</strong>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               
