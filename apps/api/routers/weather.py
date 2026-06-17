@@ -106,50 +106,53 @@ async def get_nearest_weather(lat: float, lon: float, db: AsyncSession = Depends
                 })
                 
                 # Save/upsert to weather_current table in database to cache it
-                upsert_query = text("""
-                    INSERT INTO weather_current (
-                        location_id, temperature, feels_like, humidity, wind_speed, 
-                        wind_direction, precipitation, weather_code, pressure, 
-                        visibility, uv_index, cloud_cover, updated_at
-                    ) VALUES (
-                        :location_id, :temperature, :feels_like, :humidity, :wind_speed, 
-                        :wind_direction, :precipitation, :weather_code, :pressure, 
-                        :visibility, :uv_index, :cloud_cover, :updated_at
-                    )
-                    ON CONFLICT (location_id) DO UPDATE SET
-                        temperature = EXCLUDED.temperature,
-                        feels_like = EXCLUDED.feels_like,
-                        humidity = EXCLUDED.humidity,
-                        wind_speed = EXCLUDED.wind_speed,
-                        wind_direction = EXCLUDED.wind_direction,
-                        precipitation = EXCLUDED.precipitation,
-                        weather_code = EXCLUDED.weather_code,
-                        pressure = EXCLUDED.pressure,
-                        visibility = EXCLUDED.visibility,
-                        uv_index = EXCLUDED.uv_index,
-                        cloud_cover = EXCLUDED.cloud_cover,
-                        updated_at = EXCLUDED.updated_at;
-                """)
-                
-                await db.execute(upsert_query, {
-                    "location_id": data["geoname_id"],
-                    "temperature": cur.get("temperature_2m"),
-                    "feels_like": cur.get("apparent_temperature"),
-                    "humidity": cur.get("relative_humidity_2m"),
-                    "wind_speed": cur.get("wind_speed_10m"),
-                    "wind_direction": cur.get("wind_direction_10m"),
-                    "precipitation": cur.get("precipitation"),
-                    "weather_code": cur.get("weather_code"),
-                    "pressure": cur.get("surface_pressure"),
-                    "visibility": cur.get("visibility"),
-                    "uv_index": cur.get("uv_index"),
-                    "cloud_cover": cur.get("cloud_cover"),
-                    "updated_at": observed_at_dt
-                })
-                await db.commit()
-                logger.info(f"Successfully fetched and cached live weather for city_id {data['geoname_id']} ({data['city_name']}) via /nearest fallback")
+                try:
+                    upsert_query = text("""
+                        INSERT INTO weather_current (
+                            location_id, temperature, feels_like, humidity, wind_speed, 
+                            wind_direction, precipitation, weather_code, pressure, 
+                            visibility, uv_index, cloud_cover, updated_at
+                        ) VALUES (
+                            :location_id, :temperature, :feels_like, :humidity, :wind_speed, 
+                            :wind_direction, :precipitation, :weather_code, :pressure, 
+                            :visibility, :uv_index, :cloud_cover, :updated_at
+                        )
+                        ON CONFLICT (location_id) DO UPDATE SET
+                            temperature = EXCLUDED.temperature,
+                            feels_like = EXCLUDED.feels_like,
+                            humidity = EXCLUDED.humidity,
+                            wind_speed = EXCLUDED.wind_speed,
+                            wind_direction = EXCLUDED.wind_direction,
+                            precipitation = EXCLUDED.precipitation,
+                            weather_code = EXCLUDED.weather_code,
+                            pressure = EXCLUDED.pressure,
+                            visibility = EXCLUDED.visibility,
+                            uv_index = EXCLUDED.uv_index,
+                            cloud_cover = EXCLUDED.cloud_cover,
+                            updated_at = EXCLUDED.updated_at;
+                    """)
+                    
+                    await db.execute(upsert_query, {
+                        "location_id": data["geoname_id"],
+                        "temperature": cur.get("temperature_2m"),
+                        "feels_like": cur.get("apparent_temperature"),
+                        "humidity": cur.get("relative_humidity_2m"),
+                        "wind_speed": cur.get("wind_speed_10m"),
+                        "wind_direction": cur.get("wind_direction_10m"),
+                        "precipitation": cur.get("precipitation"),
+                        "weather_code": cur.get("weather_code"),
+                        "pressure": cur.get("surface_pressure"),
+                        "visibility": cur.get("visibility"),
+                        "uv_index": cur.get("uv_index"),
+                        "cloud_cover": cur.get("cloud_cover"),
+                        "updated_at": observed_at_dt
+                    })
+                    await db.commit()
+                    logger.info(f"Successfully cached live weather for city_id {data['geoname_id']} to DB")
+                except Exception as db_err:
+                    logger.error(f"Failed to cache live weather to DB in fallback: {db_err}")
             except Exception as e:
-                logger.error(f"Failed live fetch and cache in /nearest/{lat}/{lon}: {e}")
+                logger.error(f"Failed live fetch in /nearest/{lat}/{lon}: {e}")
             
         return data
     except Exception as e:
