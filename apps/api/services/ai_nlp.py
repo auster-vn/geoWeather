@@ -142,17 +142,28 @@ class LocalNLPModel:
         if not city_name:
             return None, None, None
             
-        ascii_city = remove_accents(city_name).lower()
+        ascii_city = remove_accents(city_name).strip().lower()
+        
+        # Map common aliases (consistent with weather_tools.py _resolve_city)
+        if ascii_city in ["sai gon", "sg", "hcm", "hcmc", "ho chi minh", "ho chi minh city"]:
+            city_name = "Ho Chi Minh"
+            ascii_city = "ho chi minh"
+        elif ascii_city in ["hn", "ha noi"]:
+            city_name = "Hanoi"
+            ascii_city = "hanoi"
+
+        no_space_ascii = ascii_city.replace(" ", "")
             
         query = text("""
             SELECT city_name, ST_Y(geom::geometry) as lat, ST_X(geom::geometry) as lon 
             FROM cities 
             WHERE city_name ILIKE :exact_name 
                OR ascii_name ILIKE :exact_ascii
+               OR ascii_name ILIKE :no_space_ascii
                OR city_name ILIKE :like_name 
                OR ascii_name ILIKE :like_ascii
             ORDER BY 
-               (city_name ILIKE :exact_name OR ascii_name ILIKE :exact_ascii) DESC,
+               (city_name ILIKE :exact_name OR ascii_name ILIKE :exact_ascii OR ascii_name ILIKE :no_space_ascii) DESC,
                (country_code = 'VN') DESC,
                population DESC NULLS LAST
             LIMIT 1
@@ -160,6 +171,7 @@ class LocalNLPModel:
         result = await db.execute(query, {
             "exact_name": city_name,
             "exact_ascii": ascii_city,
+            "no_space_ascii": no_space_ascii,
             "like_name": f"%{city_name}%", 
             "like_ascii": f"%{ascii_city}%"
         })
