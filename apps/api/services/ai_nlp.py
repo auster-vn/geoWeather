@@ -163,8 +163,16 @@ class LocalNLPModel:
                OR city_name ILIKE :like_name 
                OR ascii_name ILIKE :like_ascii
             ORDER BY 
-               (city_name ILIKE :exact_name OR ascii_name ILIKE :exact_ascii OR ascii_name ILIKE :no_space_ascii) DESC,
                (country_code = 'VN') DESC,
+               (
+                 city_name ILIKE :exact_name 
+                 OR ascii_name ILIKE :exact_ascii 
+                 OR ascii_name ILIKE :no_space_ascii
+                 OR city_name ILIKE 'Tinh ' || :exact_name
+                 OR ascii_name ILIKE 'Tinh ' || :exact_ascii
+                 OR city_name ILIKE 'Thanh Pho ' || :exact_name
+                 OR ascii_name ILIKE 'Thanh Pho ' || :exact_ascii
+               ) DESC,
                population DESC NULLS LAST
             LIMIT 1
         """)
