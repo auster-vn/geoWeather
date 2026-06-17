@@ -250,13 +250,22 @@ async def get_region_weather_stats(h3_index: str, ts_db: AsyncSession = Depends(
         logger.error(f"Error in get_region_weather_stats: {e}")
         raise HTTPException(status_code=500, detail="TimescaleDB query failed.")
 
+# In-memory cache variables for /all endpoint to bypass Redis failures
+_all_weather_cache = None
+_all_weather_cache_time = 0.0
+
 @router.get("/all")
-@cache(expire=15)
 async def get_all_weather(db: AsyncSession = Depends(get_db)):
     """
     Returns current weather parameters for all cities.
     Used for GIS overlays (Scatterplot, Heatmap, Hexagon).
     """
+    global _all_weather_cache, _all_weather_cache_time
+    import time
+    now = time.time()
+    if _all_weather_cache is not None and (now - _all_weather_cache_time) < 15.0:
+        return _all_weather_cache
+
     query = text("""
         SELECT 
             c.geoname_id,
@@ -288,6 +297,8 @@ async def get_all_weather(db: AsyncSession = Depends(get_db)):
                 data["h3_r7"] = h3.latlng_to_cell(data["latitude"], data["longitude"], 7)
             processed_rows.append(data)
             
+        _all_weather_cache = processed_rows
+        _all_weather_cache_time = now
         return processed_rows
     except Exception as e:
         logger.error(f"Error in get_all_weather: {e}")
@@ -325,7 +336,6 @@ async def get_sync_status():
     return {"is_syncing": sync_lock.locked()}
 
 @router.get("/forecast/{lat}/{lon}")
-@cache(expire=900)
 async def get_forecast(lat: float, lon: float):
     """
     Fetch 7-day detailed forecast from Open-Meteo for the dashboard.

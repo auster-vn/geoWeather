@@ -134,12 +134,23 @@ async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> d
         return data
     # --- END MOCK ---
 
-    r_client = await get_redis_client()
+    r_client = None
+    try:
+        r_client = await get_redis_client()
+    except Exception as e:
+        logger.warning(f"Failed to retrieve Redis client in _fetch_with_cache: {e}")
+
     # Create a stable cache key
     sorted_params = dict(sorted(params.items()))
     cache_key = f"weather_cache:{url}:{json.dumps(sorted_params)}"
     
-    cached = await r_client.get(cache_key)
+    cached = None
+    if r_client:
+        try:
+            cached = await r_client.get(cache_key)
+        except Exception as e:
+            logger.warning(f"Failed to get cache key from Redis: {e}")
+
     if cached:
         logger.info(f"Cache HIT for {cache_key}")
         return json.loads(cached)
@@ -149,8 +160,15 @@ async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> d
         r = await client.get(url, params=params)
         r.raise_for_status()
         data = r.json()
-        await r_client.setex(cache_key, ttl_seconds, json.dumps(data))
+        
+        if r_client:
+            try:
+                await r_client.setex(cache_key, ttl_seconds, json.dumps(data))
+            except Exception as e:
+                logger.warning(f"Failed to write cache key to Redis: {e}")
+                
         return data
+
 
 # ─── Tool Definitions ─────────────────────────────────────────────────────────
 
