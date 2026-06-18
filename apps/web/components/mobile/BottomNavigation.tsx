@@ -1,12 +1,13 @@
 'use client'
 
 import { useWeatherStore, BottomNavTab } from '../../store/weather'
+import { Map, Sparkles, BarChart3, Settings, LucideIcon } from 'lucide-react'
 
-const TABS: { id: BottomNavTab; label: string; icon: string }[] = [
-  { id: 'map',       label: 'Bản đồ',    icon: '🗺️' },
-  { id: 'ai',        label: 'AI',        icon: '🤖' },
-  { id: 'analytics', label: 'Thống kê',  icon: '📊' },
-  { id: 'settings',  label: 'Cài đặt',   icon: '⚙️' },
+const TABS: { id: BottomNavTab; label: string; icon: LucideIcon }[] = [
+  { id: 'map',       label: 'Bản đồ',    icon: Map },
+  { id: 'ai',        label: 'AI',        icon: Sparkles },
+  { id: 'analytics', label: 'Thống kê',  icon: BarChart3 },
+  { id: 'settings',  label: 'Cài đặt',   icon: Settings },
 ]
 
 export function BottomNavigation() {
@@ -31,19 +32,25 @@ export function BottomNavigation() {
 
   return (
     <nav className="mobile-bottom-nav" aria-label="Navigation">
-      {TABS.map((tab) => (
-        <button
-          key={tab.id}
-          id={`nav-tab-${tab.id}`}
-          className={`mobile-nav-btn ${activeBottomNav === tab.id ? 'active' : ''}`}
-          onClick={() => handleTab(tab.id)}
-          aria-current={activeBottomNav === tab.id ? 'page' : undefined}
-        >
-          <span className="mobile-nav-icon">{tab.icon}</span>
-          <span className="mobile-nav-label">{tab.label}</span>
-          {activeBottomNav === tab.id && <span className="mobile-nav-indicator" />}
-        </button>
-      ))}
+      {TABS.map((tab) => {
+        const Icon = tab.icon
+        return (
+          <button
+            key={tab.id}
+            id={`nav-tab-${tab.id}`}
+            className={`mobile-nav-btn ${activeBottomNav === tab.id ? 'active' : ''}`}
+            onClick={() => handleTab(tab.id)}
+            aria-current={activeBottomNav === tab.id ? 'page' : undefined}
+          >
+            <span className="mobile-nav-icon">
+              <Icon size={20} strokeWidth={2} />
+            </span>
+            <span className="mobile-nav-label">{tab.label}</span>
+            {activeBottomNav === tab.id && <span className="mobile-nav-indicator" />}
+          </button>
+        )
+      })}
     </nav>
   )
 }
+
