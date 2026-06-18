@@ -51,6 +51,10 @@ async def get_nearest_weather(lat: float, lon: float, db: AsyncSession = Depends
             wc.wind_direction,
             wc.precipitation,
             wc.weather_code,
+            wc.pressure,
+            wc.visibility,
+            wc.uv_index,
+            wc.cloud_cover,
             wc.updated_at AS observed_at
         FROM nearest_city nc
         LEFT JOIN weather_current wc ON wc.location_id = nc.geoname_id;

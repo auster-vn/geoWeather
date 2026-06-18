@@ -512,7 +512,8 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
                 LIMIT 1
             )
             SELECT nc.*, wc.temperature, wc.feels_like, wc.humidity,
-                   wc.wind_speed, wc.weather_code, wc.precipitation
+                   wc.wind_speed, wc.weather_code, wc.precipitation,
+                   wc.pressure, wc.visibility, wc.uv_index, wc.cloud_cover
             FROM nearest_city nc
             LEFT JOIN weather_current wc ON wc.location_id = nc.geoname_id;
         """)
@@ -541,7 +542,8 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
                     "longitude": row_dict["lon"],
                     "current": (
                         "temperature_2m,relative_humidity_2m,apparent_temperature,"
-                        "precipitation,weather_code,wind_speed_10m,wind_direction_10m"
+                        "precipitation,weather_code,wind_speed_10m,wind_direction_10m,"
+                        "surface_pressure,visibility,uv_index,cloud_cover"
                     ),
                     "timezone": "Asia/Bangkok",
                     "forecast_days": 1,
@@ -554,7 +556,11 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
                     "humidity": cur.get("relative_humidity_2m"),
                     "wind_speed": cur.get("wind_speed_10m"),
                     "precipitation": cur.get("precipitation"),
-                    "condition": _wmo_desc(cur.get("weather_code", 0))
+                    "condition": _wmo_desc(cur.get("weather_code", 0)),
+                    "pressure": cur.get("surface_pressure"),
+                    "visibility": cur.get("visibility"),
+                    "uv_index": cur.get("uv_index"),
+                    "cloud_cover": cur.get("cloud_cover")
                 })
             except Exception as e:
                 logger.error(f"Failed live fetch in get_weather_by_coords: {e}")

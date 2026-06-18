@@ -553,7 +553,7 @@ export function ChatPanel() {
                           🌧️ Mưa: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.precipitation !== undefined ? `${m.toolData.precipitation?.toFixed(1)} mm` : '--'}</strong>
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          ☁️ Mây: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.cloud_cover !== undefined ? m.toolData.cloud_cover : '--'}</strong>
+                          ☁️ Mây: <strong style={{ color: 'var(--text-primary)' }}>{m.toolData.cloud_cover !== undefined ? (typeof m.toolData.cloud_cover === 'number' ? `${m.toolData.cloud_cover}%` : m.toolData.cloud_cover) : '--'}</strong>
                         </div>
                       </div>
                     </div>

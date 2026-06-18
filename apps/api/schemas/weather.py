@@ -14,6 +14,10 @@ class WeatherResponse(BaseModel):
     wind_direction: Optional[int] = None
     precipitation: Optional[float] = None
     weather_code: Optional[int] = None
+    pressure: Optional[float] = None
+    visibility: Optional[float] = None
+    uv_index: Optional[float] = None
+    cloud_cover: Optional[int] = None
     observed_at: Optional[datetime] = None
     h3_r4: Optional[str] = None
     h3_r7: Optional[str] = None
