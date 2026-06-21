@@ -105,9 +105,17 @@ async def redis_listener():
                     try:
                         channel_parts = message["channel"].split(":")
                         h3_cell = channel_parts[-1]
-                        data = json.loads(message["data"])
-                        await manager.broadcast_update(h3_cell, data)
-                        await manager.broadcast_update("global", data)
+                        if h3_cell == "batch":
+                            updates = json.loads(message["data"])
+                            for update in updates:
+                                cell_id = update.get("h3_index_r4")
+                                if cell_id:
+                                    await manager.broadcast_update(cell_id, update)
+                                    await manager.broadcast_update("global", update)
+                        else:
+                            data = json.loads(message["data"])
+                            await manager.broadcast_update(h3_cell, data)
+                            await manager.broadcast_update("global", data)
                     except Exception as e:
                         logger.error(f"Error broadcasting WebSocket message: {e}")
                 # Yield control to the event loop between polls
