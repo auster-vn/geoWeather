@@ -22,7 +22,8 @@ async def get_redis_client():
 async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> dict:
     """Fetch data from HTTP or Redis cache."""
     # --- MOCK OPEN-METEO (For local testing) ---
-    if "open-meteo.com" in url:
+    import os
+    if os.environ.get("MOCK_WEATHER", "false").lower() == "true" and "open-meteo.com" in url:
         import math
         from datetime import datetime, timedelta
         import zoneinfo
