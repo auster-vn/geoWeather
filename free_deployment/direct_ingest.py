@@ -333,11 +333,11 @@ async def run_ingestion():
         async with pool_ts.acquire() as conn:
             deleted_obs = await conn.execute("""
                 DELETE FROM weather_observations 
-                WHERE observed_at < NOW() - INTERVAL '1 day';
+                WHERE observed_at < NOW() - INTERVAL '2 days';
             """)
             deleted_agg = await conn.execute("""
                 DELETE FROM weather_hourly_agg 
-                WHERE window_start < NOW() - INTERVAL '50 hours';
+                WHERE window_start < NOW() - INTERVAL '7 days';
             """)
             logger.info(f"Database retention cleanup completed: {deleted_obs}, {deleted_agg}")
             
