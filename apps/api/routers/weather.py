@@ -322,12 +322,12 @@ async def trigger_sync(background_tasks: BackgroundTasks):
     async def run_sync():
         async with sync_lock:
             try:
-                logger.info("Starting background sync ingestion...")
-                from services.ingestion.producer import run_once
-                await run_once()
-                logger.info("Background sync ingestion completed successfully.")
+                logger.info("Starting background direct sync ingestion...")
+                from free_deployment.direct_ingest import run_ingestion
+                await run_ingestion()
+                logger.info("Background direct sync ingestion completed successfully.")
             except Exception as e:
-                logger.error(f"Error during background sync ingestion: {e}")
+                logger.error(f"Error during background direct sync ingestion: {e}")
                 
     background_tasks.add_task(run_sync)
     return {"status": "success", "message": "Sync started in background."}

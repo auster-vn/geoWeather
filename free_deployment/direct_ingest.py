@@ -328,6 +328,19 @@ async def run_ingestion():
                 # Sleep briefly between batches to prevent hitting Open-Meteo 429 Rate Limits
                 await asyncio.sleep(0.5)
                 
+        # 8. Database retention cleanup (Prevent Supabase 500MB storage limit overflow)
+        logger.info("Running database retention cleanup...")
+        async with pool_ts.acquire() as conn:
+            deleted_obs = await conn.execute("""
+                DELETE FROM weather_observations 
+                WHERE observed_at < NOW() - INTERVAL '3 days';
+            """)
+            deleted_agg = await conn.execute("""
+                DELETE FROM weather_hourly_agg 
+                WHERE window_start < NOW() - INTERVAL '7 days';
+            """)
+            logger.info(f"Database retention cleanup completed: {deleted_obs}, {deleted_agg}")
+            
         logger.info("Direct weather sync cycle completed successfully.")
         
     except Exception as e:
