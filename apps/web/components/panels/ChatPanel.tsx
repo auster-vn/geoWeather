@@ -163,7 +163,7 @@ export function ChatPanel() {
     // Add empty assistant response to stream into
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
-    const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+    const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
     const eventSourceUrl = `${apiHost}/api/v1/chat/stream?message=${encodeURIComponent(userMessage)}&history_json=${encodeURIComponent(JSON.stringify(history))}&model=${selectedModel}`
 
     try {
