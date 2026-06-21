@@ -310,7 +310,7 @@ async def get_all_weather(db: AsyncSession = Depends(get_db)):
 
 sync_lock = asyncio.Lock()
 
-@router.post("/sync")
+@router.api_route("/sync", methods=["GET", "POST"])
 async def trigger_sync(background_tasks: BackgroundTasks):
     """
     Trigger the weather data ingestion cycle in the background.
