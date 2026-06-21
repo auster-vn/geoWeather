@@ -278,11 +278,26 @@ export function WeatherMap({ isDark = false }: { isDark?: boolean }) {
       )}
       
       {loading && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'rgba(2,6,23,0.7)' : 'rgba(232,244,253,0.7)', backdropFilter: 'blur(8px)', zIndex: 10 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: isDark ? '#34d399' : '#0ea5e9', fontWeight: 500 }}>
-            <Activity className="animate-spin w-8 h-8" />
-            <span>Nạp bản đồ GIS thời tiết...</span>
-          </div>
+        <div style={{
+          position: 'absolute',
+          top: '76px',
+          right: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 14px',
+          background: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: '20px',
+          boxShadow: 'var(--shadow-float)',
+          border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.05)',
+          color: isDark ? '#34d399' : '#0ea5e9',
+          fontWeight: 500,
+          fontSize: '11px',
+          zIndex: 99
+        }}>
+          <Activity className="animate-spin w-3.5 h-3.5" />
+          <span>Đang nạp dữ liệu trạm...</span>
         </div>
       )}
 

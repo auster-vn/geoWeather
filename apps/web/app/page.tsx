@@ -1,7 +1,28 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { WeatherMap } from '../components/map/WeatherMap'
+import dynamic from 'next/dynamic'
+
+const WeatherMap = dynamic(
+  () => import('../components/map/WeatherMap').then((mod) => mod.WeatherMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#020617', color: '#64748b' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', fontWeight: 500 }}>
+          <div style={{ width: '32px', height: '32px', border: '3px solid #64748b', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <span>Đang tải giao diện bản đồ...</span>
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      </div>
+    )
+  }
+)
 import { ChatPanel } from '../components/panels/ChatPanel'
 import { WeatherDetail } from '../components/panels/WeatherDetail'
 import { ThemeToggle } from '../components/ThemeToggle'
