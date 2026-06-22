@@ -350,4 +350,7 @@ async def get_forecast(lat: float, lon: float):
         return data
     except Exception as e:
         logger.exception("Error fetching forecast")
-        return {"error": str(e), "type": str(type(e))}
+        raise HTTPException(
+            status_code=503,
+            detail="Dịch vụ thời tiết tạm thời không khả dụng. Vui lòng thử lại sau."
+        )
