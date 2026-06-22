@@ -5,23 +5,20 @@ import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 import httpx
-import redis.asyncio as redis
 
 logger = logging.getLogger(__name__)
 
-# Redis Client Singleton
-_redis_client = None
-
 async def get_redis_client():
-    global _redis_client
-    if _redis_client is None:
-        from apps.api.core.config import settings
-        _redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
-    return _redis_client
+    """Delegate to the shared Redis client (with timeouts) from core/redis.py."""
+    try:
+        from apps.api.core.redis import get_redis
+        return await get_redis()
+    except Exception:
+        return None
 
 async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> dict:
     """Fetch data from HTTP or Redis cache."""
-    # --- MOCK OPEN-METEO (For local testing) ---
+    # --- MOCK OPEN-METEO (For local testing only — triggered by MOCK_WEATHER=true) ---
     import os
     if os.environ.get("MOCK_WEATHER", "false").lower() == "true" and "open-meteo.com" in url:
         import math
@@ -37,7 +34,7 @@ async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> d
         now = datetime.now(zone)
         today = now.replace(hour=0, minute=0, second=0, microsecond=0)
         
-        data = {}
+        data = {"is_mock": True}
         
         if "air-quality" in url:
             data["current"] = {
@@ -135,11 +132,7 @@ async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> d
         return data
     # --- END MOCK ---
 
-    r_client = None
-    try:
-        r_client = await get_redis_client()
-    except Exception as e:
-        logger.warning(f"Failed to retrieve Redis client in _fetch_with_cache: {e}")
+    r_client = await get_redis_client()
 
     # Create a stable cache key
     sorted_params = dict(sorted(params.items()))
@@ -172,7 +165,7 @@ async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> d
                     
             return data
     except Exception as fetch_err:
-        logger.error(f"HTTP fetch failed for {url} with params {params}: {fetch_err}. Generating fallback mock data.")
+        logger.error(f"HTTP fetch failed for {url} with params {params}: {fetch_err}. Returning fallback mock data.")
         if "open-meteo.com" in url:
             import math
             from datetime import datetime, timedelta
@@ -187,7 +180,8 @@ async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> d
             now = datetime.now(zone)
             today = now.replace(hour=0, minute=0, second=0, microsecond=0)
             
-            data = {}
+            # is_mock=True: frontend will show a "dữ liệu ước tính" notice
+            data = {"is_mock": True}
             
             if "air-quality" in url:
                 data["current"] = {

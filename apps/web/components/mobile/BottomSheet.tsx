@@ -190,6 +190,24 @@ export function BottomSheet() {
             </div>
           )}
 
+          {/* Mock data notice */}
+          {forecast?.is_mock && (
+            <div style={{
+              margin: '6px 16px 0',
+              padding: '6px 10px',
+              borderRadius: 8,
+              background: 'rgba(251,191,36,0.12)',
+              border: '1px solid rgba(251,191,36,0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 11,
+              color: '#FBB824',
+            }}>
+              ⚠️ Dữ liệu ước tính — API thời tiết tạm thời không khả dụng
+            </div>
+          )}
+
           {/* Scrollable content */}
           <div className="mobile-sheet-body">
             {loading && (

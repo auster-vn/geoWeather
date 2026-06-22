@@ -99,6 +99,23 @@ export function WeatherDetail() {
         </div>
       ) : (
         <div className="weather-detail-body">
+          {/* Mock data notice */}
+          {forecast?.is_mock && (
+            <div style={{
+              marginBottom: 10,
+              padding: '7px 12px',
+              borderRadius: 8,
+              background: 'rgba(251,191,36,0.1)',
+              border: '1px solid rgba(251,191,36,0.3)',
+              fontSize: 11,
+              color: '#FBB824',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}>
+              ⚠️ Dữ liệu ước tính — API thời tiết tạm thời không khả dụng
+            </div>
+          )}
           {/* Main Weather Card */}
           <div className="weather-detail-main-card">
             <div className="weather-temp-group">
