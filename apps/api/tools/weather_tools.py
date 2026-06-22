@@ -150,22 +150,43 @@ async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> d
         return json.loads(cached)
         
     logger.info(f"Cache MISS for {cache_key}. Fetching...")
+    stale_cache_key = f"{cache_key}:stale"   # Long-lived backup copy
     try:
         async with httpx.AsyncClient(timeout=12) as client:
             headers = {"User-Agent": "GeoWeather/1.0 (contact: phutc04@gmail.com)"}
             r = await client.get(url, params=params, headers=headers)
+            
+            # Handle rate-limit separately: serve stale cache instead of mock
+            if r.status_code == 429:
+                logger.warning(f"Open-Meteo 429 (rate limited). Attempting stale cache fallback.")
+                if r_client:
+                    try:
+                        stale = await r_client.get(stale_cache_key)
+                        if stale:
+                            logger.info("Serving stale cache (rate-limit fallback).")
+                            data = json.loads(stale)
+                            data["_stale"] = True
+                            return data
+                    except Exception:
+                        pass
+                # No stale cache — fall through to mock
+                raise Exception(f"HTTP 429: {r.text[:200]}")
+            
             r.raise_for_status()
             data = r.json()
             
             if r_client:
                 try:
+                    # Primary cache (normal TTL)
                     await r_client.setex(cache_key, ttl_seconds, json.dumps(data))
+                    # Stale backup: keep for 24 hours as 429 fallback
+                    await r_client.setex(stale_cache_key, 86400, json.dumps(data))
                 except Exception as e:
                     logger.warning(f"Failed to write cache key to Redis: {e}")
                     
             return data
     except Exception as fetch_err:
-        logger.error(f"HTTP fetch failed for {url} with params {params}: {fetch_err}. Returning fallback mock data.")
+        logger.error(f"HTTP fetch failed for {url}: {fetch_err}. Returning fallback mock data.")
         if "open-meteo.com" in url:
             import math
             from datetime import datetime, timedelta
@@ -484,7 +505,8 @@ async def _fetch_open_meteo_forecast(lat: float, lon: float, tz: str = "Asia/Ban
         "forecast_days": 7,
         "timezone": tz or "Asia/Bangkok",
     }
-    return await _fetch_with_cache(url, params)
+    # TTL = 6 hours: forecast changes slowly, caching aggressively reduces API calls
+    return await _fetch_with_cache(url, params, ttl_seconds=21600)
 
 
 def _wmo_desc(code: int) -> str:

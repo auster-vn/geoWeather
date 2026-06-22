@@ -52,7 +52,8 @@ export function BottomSheet() {
         const apiHost = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
         const [wRes, fRes] = await Promise.all([
           fetch(`${apiHost}/api/v1/weather/nearest/${selectedLocation.lat}/${selectedLocation.lon}`),
-          fetch(`${apiHost}/api/v1/weather/forecast/${selectedLocation.lat}/${selectedLocation.lon}`),
+          // Call via Vercel proxy route (avoids Open-Meteo IP quota on Render shared IPs)
+          fetch(`/api/forecast/${selectedLocation.lat}/${selectedLocation.lon}`),
         ])
         if (wRes.ok) setWeather(await wRes.json())
         if (fRes.ok) setForecast(await fRes.json())

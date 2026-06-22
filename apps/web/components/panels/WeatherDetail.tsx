@@ -38,8 +38,8 @@ export function WeatherDetail() {
           setWeather(data)
         }
         
-        // Fetch Open-Meteo forecast
-        const forecastRes = await fetch(`${apiHost}/api/v1/weather/forecast/${selectedLocation.lat}/${selectedLocation.lon}`)
+        // Fetch Open-Meteo forecast via Vercel proxy (avoids Render shared IP quota)
+        const forecastRes = await fetch(`/api/forecast/${selectedLocation.lat}/${selectedLocation.lon}`)
         if (forecastRes.ok) {
           const forecastData = await forecastRes.json()
           setForecast(forecastData)
