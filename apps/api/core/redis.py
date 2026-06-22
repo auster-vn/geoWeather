@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import redis.asyncio as aioredis
 from .config import settings
 
@@ -9,10 +10,20 @@ redis_client: aioredis.Redis = None
 async def init_redis():
     global redis_client
     logger.info("Initializing Redis client...")
-    redis_client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
-    # Ping to test connection
-    await redis_client.ping()
-    logger.info("Redis initialized.")
+    try:
+        redis_client = aioredis.from_url(
+            settings.REDIS_URL, 
+            decode_responses=True,
+            socket_timeout=3.0,
+            socket_connect_timeout=3.0
+        )
+        # Ping to test connection
+        await asyncio.wait_for(redis_client.ping(), timeout=3.0)
+        logger.info("Redis initialized.")
+    except Exception as e:
+        logger.error(f"Redis initialization failed: {e}. Running in degraded (no-cache) mode.")
+        # Create a dummy client or set to None
+        redis_client = None
 
 async def get_redis() -> aioredis.Redis:
     if redis_client is None:

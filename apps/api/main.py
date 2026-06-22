@@ -28,28 +28,46 @@ logger = logging.getLogger("api_main")
 async def lifespan(app: FastAPI):
     logger.info("Initializing GeoWeather API services...")
     # Initialize DB (PostgreSQL engines & TimescaleDB hypertables creation)
-    await init_db()
+    try:
+        await init_db()
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        
     # Initialize Redis
     await init_redis()
     
-    # Initialize FastAPI Cache using the redis client
-    redis_client = await get_redis()
-    FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
+    # Initialize FastAPI Cache using the redis client (with in-memory fallback)
+    try:
+        redis_client = await get_redis()
+        FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
+        logger.info("FastAPI Cache initialized with Redis.")
+    except Exception as cache_err:
+        logger.warning(f"Failed to initialize Redis cache: {cache_err}. Falling back to InMemoryBackend.")
+        from fastapi_cache.backends.inmemory import InMemoryBackend
+        FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
     
     # Start Redis WebSocket pub/sub listener as background task
-    listener_task = asyncio.create_task(websocket.redis_listener())
+    listener_task = None
+    try:
+        # Check if redis client is available
+        await get_redis()
+        listener_task = asyncio.create_task(websocket.redis_listener())
+    except Exception as ws_err:
+        logger.warning(f"WebSocket Redis listener could not be started: {ws_err}")
     
     yield
     
     logger.info("Shutting down GeoWeather API services...")
-    listener_task.cancel()
-    try:
-        await listener_task
-    except asyncio.CancelledError:
-        pass
+    if listener_task:
+        listener_task.cancel()
+        try:
+            await listener_task
+        except asyncio.CancelledError:
+            pass
         
     await close_db()
     await close_redis()
+
 
 app = FastAPI(
     title="GeoWeather API",
