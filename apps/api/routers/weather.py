@@ -350,5 +350,4 @@ async def get_forecast(lat: float, lon: float):
         return data
     except Exception as e:
         logger.exception("Error fetching forecast")
-        from fastapi import HTTPException
-        raise HTTPException(status_code=503, detail="Open-Meteo API is currently unavailable (502 Bad Gateway). Please try again later.")
+        return {"error": str(e), "type": str(type(e))}
