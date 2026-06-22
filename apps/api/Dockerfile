@@ -26,4 +26,5 @@ ENV PYTHONPATH="/app"
 RUN adduser --disabled-password --no-create-home appuser
 USER appuser
 EXPOSE 8000
-CMD ["uvicorn", "apps.api.main:app", "--workers", "4", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn apps.api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WEB_CONCURRENCY:-1}
+
