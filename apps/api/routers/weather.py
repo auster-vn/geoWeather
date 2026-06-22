@@ -87,7 +87,7 @@ async def get_nearest_weather(lat: float, lon: float, db: AsyncSession = Depends
                     "forecast_days": 1,
                 }
                 from ..tools.weather_tools import _fetch_with_cache
-                resp = await _fetch_with_cache(url, params)
+                resp = await _fetch_with_cache(url, params, ttl_seconds=3600)
                 cur = resp.get("current", {})
                 
                 observed_at_dt = datetime.now(timezone.utc)

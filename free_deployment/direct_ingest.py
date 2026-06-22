@@ -14,6 +14,15 @@ logger = logging.getLogger("direct_ingest")
 
 db_semaphore = asyncio.Semaphore(10)
 
+OPEN_METEO_HEADERS = {
+    "User-Agent": "GeoWeather/1.0 (contact: phutc04@gmail.com; free-tier-ingest)"
+}
+
+
+class RateLimitError(Exception):
+    """Raised when Open-Meteo returns HTTP 429."""
+    pass
+
 # Read configurations from environment variables
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:geoweather_local@localhost:5432/geoweather")
 TIMESCALE_URL = os.environ.get("TIMESCALE_URL", os.environ.get("DATABASE_URL"))  # Default to DATABASE_URL if separate Timescale DB is not used
@@ -41,7 +50,11 @@ def get_asyncpg_dsn(url: str) -> str:
     return url
 
 async def fetch_batch_weather(locations: list, client: httpx.AsyncClient) -> list:
-    """Fetch current weather for up to 100 coordinates from Open-Meteo."""
+    """Fetch current weather for up to 100 coordinates from Open-Meteo.
+    
+    Raises RateLimitError on HTTP 429 so callers can skip instead of crash.
+    Returns [] on other errors.
+    """
     if not locations:
         return []
     
@@ -57,10 +70,24 @@ async def fetch_batch_weather(locations: list, client: httpx.AsyncClient) -> lis
     }
     
     try:
-        response = await client.get(OPEN_METEO_BATCH_URL, params=params, timeout=20.0)
+        response = await client.get(
+            OPEN_METEO_BATCH_URL,
+            params=params,
+            timeout=20.0,
+            headers=OPEN_METEO_HEADERS,
+        )
+        
+        if response.status_code == 429:
+            raise RateLimitError(
+                f"Open-Meteo daily quota exceeded (429). "
+                f"Batch of {len(locations)} cities skipped."
+            )
+        
         response.raise_for_status()
         data = response.json()
         return data if isinstance(data, list) else [data]
+    except RateLimitError:
+        raise  # Re-raise so run_ingestion can handle it
     except Exception as e:
         logger.error(f"Failed to fetch batch weather from Open-Meteo: {e}")
         return []
@@ -290,8 +317,17 @@ async def run_ingestion():
     
     # Use create_pool instead of connect to support concurrent queries
     # Reduce pool size to avoid Supabase connection limits (15 max)
-    pool_pg = await asyncpg.create_pool(pg_dsn, min_size=1, max_size=4, statement_cache_size=0)
-    pool_ts = await asyncpg.create_pool(ts_dsn, min_size=1, max_size=4, statement_cache_size=0) if TIMESCALE_URL != DATABASE_URL else pool_pg
+    pool_pg = await asyncpg.create_pool(
+        pg_dsn, min_size=1, max_size=4,
+        statement_cache_size=0, timeout=10, command_timeout=15
+    )
+    pool_ts = (
+        await asyncpg.create_pool(
+            ts_dsn, min_size=1, max_size=4,
+            statement_cache_size=0, timeout=10, command_timeout=15
+        )
+        if TIMESCALE_URL != DATABASE_URL else pool_pg
+    )
     redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
     
     try:
@@ -319,12 +355,23 @@ async def run_ingestion():
         redis_updates = []
 
         logger.info(f"Processing weather updates in {len(batches)} batches...")
+        rate_limited = False
         async with httpx.AsyncClient() as http_client:
             for idx, batch in enumerate(batches):
-                logger.info(f"Polling batch {idx+1}/{len(batches)} containing {len(batch)} cities...")
-                results = await fetch_batch_weather(batch, http_client)
-                
-                # Update database for all cities in this batch concurrently using the connection pools
+                if rate_limited:
+                    # Once quota is hit, skip remaining batches for this cycle
+                    logger.warning(f"Skipping batch {idx+1}/{len(batches)} — quota exhausted for today.")
+                    continue
+
+                logger.info(f"Polling batch {idx+1}/{len(batches)} ({len(batch)} cities)...")
+                try:
+                    results = await fetch_batch_weather(batch, http_client)
+                except RateLimitError as rl:
+                    logger.error(f"Rate limit hit at batch {idx+1}: {rl}")
+                    rate_limited = True
+                    continue
+
+                # Update database for all cities in this batch concurrently
                 tasks = []
                 for city_info, weather_info in zip(batch, results):
                     tasks.append(
@@ -333,7 +380,7 @@ async def run_ingestion():
                         )
                     )
                 await asyncio.gather(*tasks)
-                # Sleep briefly between batches to prevent hitting Open-Meteo 429 Rate Limits
+                # Brief sleep between batches to be polite to Open-Meteo
                 await asyncio.sleep(0.5)
                 
         # Publish accumulated updates to Redis in a single batch call!

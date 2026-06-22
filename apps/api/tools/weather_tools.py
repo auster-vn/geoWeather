@@ -16,8 +16,13 @@ async def get_redis_client():
     except Exception:
         return None
 
-async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 900) -> dict:
-    """Fetch data from HTTP or Redis cache."""
+async def _fetch_with_cache(url: str, params: dict, ttl_seconds: int = 3600) -> dict:
+    """Fetch data from HTTP or Redis cache.
+    
+    Default TTL = 1 hour. Current weather changes slowly and Render's shared IP
+    has a strict Open-Meteo daily quota, so aggressive caching is essential.
+    Forecast calls should override with ttl_seconds=21600 (6h).
+    """
     # --- MOCK OPEN-METEO (For local testing only — triggered by MOCK_WEATHER=true) ---
     import os
     if os.environ.get("MOCK_WEATHER", "false").lower() == "true" and "open-meteo.com" in url:
@@ -602,7 +607,7 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
                 "timezone": city.get("timezone") or "Asia/Bangkok",
                 "forecast_days": 1,
             }
-            data = await _fetch_with_cache(url, params)
+            data = await _fetch_with_cache(url, params, ttl_seconds=3600)
 
             cur = data.get("current", {})
             return {
@@ -680,7 +685,7 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
                     "timezone": "Asia/Bangkok",
                     "forecast_days": 1,
                 }
-                data = await _fetch_with_cache(url, params)
+                data = await _fetch_with_cache(url, params, ttl_seconds=3600)
                 cur = data.get("current", {})
                 row_dict.update({
                     "temperature": cur.get("temperature_2m"),
@@ -866,7 +871,7 @@ async def execute_tool(name: str, arguments: Dict[str, Any], db: AsyncSession) -
                 "current": "european_aqi,us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,uv_index",
                 "timezone": timezone
             }
-            data = await _fetch_with_cache(url, params)
+            data = await _fetch_with_cache(url, params, ttl_seconds=3600)  # Air quality changes slowly
 
             cur = data.get("current", {})
             return {
