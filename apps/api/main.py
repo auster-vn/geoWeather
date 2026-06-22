@@ -27,34 +27,38 @@ logger = logging.getLogger("api_main")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Initializing GeoWeather API services...")
-    # Initialize DB (PostgreSQL engines & TimescaleDB hypertables creation)
+    
+    # Initialize DB — wrapped with timeout so a slow Supabase connection never hangs startup
     try:
-        await init_db()
+        await asyncio.wait_for(init_db(), timeout=10.0)
+    except asyncio.TimeoutError:
+        logger.error("Database initialization timed out (>10s). Continuing in degraded mode.")
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        logger.error(f"Database initialization failed: {e}. Continuing in degraded mode.")
         
-    # Initialize Redis
+    # Initialize Redis — already has a 3s internal timeout
     await init_redis()
     
-    # Initialize FastAPI Cache using the redis client (with in-memory fallback)
+    # Initialize FastAPI Cache (Redis → in-memory fallback)
     try:
         redis_client = await get_redis()
         FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
-        logger.info("FastAPI Cache initialized with Redis.")
+        logger.info("FastAPI Cache initialized with Redis backend.")
     except Exception as cache_err:
-        logger.warning(f"Failed to initialize Redis cache: {cache_err}. Falling back to InMemoryBackend.")
+        logger.warning(f"Redis cache unavailable: {cache_err}. Using InMemoryBackend fallback.")
         from fastapi_cache.backends.inmemory import InMemoryBackend
         FastAPICache.init(InMemoryBackend(), prefix="fastapi-cache")
     
-    # Start Redis WebSocket pub/sub listener as background task
+    # Start Redis WebSocket pub/sub listener as a non-blocking background task
     listener_task = None
     try:
-        # Check if redis client is available
         await get_redis()
         listener_task = asyncio.create_task(websocket.redis_listener())
+        logger.info("Redis WebSocket listener started.")
     except Exception as ws_err:
-        logger.warning(f"WebSocket Redis listener could not be started: {ws_err}")
+        logger.warning(f"WebSocket Redis listener skipped (no Redis): {ws_err}")
     
+    logger.info("GeoWeather API startup complete.")
     yield
     
     logger.info("Shutting down GeoWeather API services...")
