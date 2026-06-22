@@ -354,3 +354,48 @@ async def get_forecast(lat: float, lon: float):
             status_code=503,
             detail="Dịch vụ thời tiết tạm thời không khả dụng. Vui lòng thử lại sau."
         )
+
+
+@router.get("/debug-openmeteo")
+async def debug_openmeteo():
+    """
+    Diagnostic endpoint: tests Open-Meteo connectivity directly from the server.
+    Returns exact error message and env info to help debug mock-data issues.
+    """
+    import os, httpx, time as _time
+    result = {
+        "MOCK_WEATHER_env": os.environ.get("MOCK_WEATHER", "NOT_SET"),
+        "server_time_utc": datetime.now(timezone.utc).isoformat(),
+        "open_meteo_test": None,
+        "error": None,
+        "latency_ms": None,
+    }
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": 21.0285,
+        "longitude": 105.8542,
+        "current": "temperature_2m,weather_code",
+        "timezone": "Asia/Bangkok",
+        "forecast_days": 1,
+    }
+    try:
+        t0 = _time.monotonic()
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(
+                url, params=params,
+                headers={"User-Agent": "GeoWeather/1.0 (contact: phutc04@gmail.com)"}
+            )
+            elapsed = round((_time.monotonic() - t0) * 1000)
+            result["latency_ms"] = elapsed
+            result["http_status"] = r.status_code
+            if r.status_code == 200:
+                body = r.json()
+                result["open_meteo_test"] = "OK"
+                result["temperature_hanoi"] = body.get("current", {}).get("temperature_2m")
+            else:
+                result["open_meteo_test"] = "HTTP_ERROR"
+                result["error"] = r.text[:500]
+    except Exception as e:
+        result["open_meteo_test"] = "EXCEPTION"
+        result["error"] = str(e)
+    return result
